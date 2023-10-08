@@ -1,7 +1,13 @@
+import re
+from util.ENFA import ENFA
+from util.regex import regular_definition_to_expression
+
 regular_definitions = {}
 states = []
 lex_units = []
 rules = []
+
+regular_expressions = {}
 
 
 class LineTypes:
@@ -82,3 +88,11 @@ if __name__ == '__main__':
     print(states)
     print(lex_units)
     print(rules)
+
+    # Note: this only works for Python 3.9+
+    rules = map(lambda rule: rule | {'regex': regular_definition_to_expression(rule['regex'], regular_definitions)},
+                rules)
+
+    rules = map(lambda rule: rule | {'nfa_definition': ENFA(regex=rule['regex']).export_definition()}, rules)
+
+    print(list(rules))
