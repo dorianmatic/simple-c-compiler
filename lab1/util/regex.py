@@ -35,7 +35,7 @@ def split_by_or(regex):
             parentheses -= 1
         elif c == '|' and parentheses == 0:
             or_choices.append(regex[prev_choice:i])
-            prev_choice = i
+            prev_choice = i + 1
 
     if len(or_choices) != 0 and regex[prev_choice:]:
         or_choices.append(regex[prev_choice:])

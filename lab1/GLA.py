@@ -1,13 +1,6 @@
-import re
 from util.ENFA import ENFA
 from util.regex import regular_definition_to_expression
-
-regular_definitions = {}
-states = []
-lex_units = []
-rules = []
-
-regular_expressions = {}
+import pickle
 
 
 class LineTypes:
@@ -64,6 +57,11 @@ def create_empty_rule():
 
 
 if __name__ == '__main__':
+    regular_definitions = {}
+    states = []
+    lex_units = []
+    rules = []
+
     rule = create_empty_rule()
     rule_processing = False
 
@@ -84,15 +82,11 @@ if __name__ == '__main__':
 
             rule_processing = not processed
 
-    print(regular_definitions)
-    print(states)
-    print(lex_units)
-    print(rules)
-
     # Note: this only works for Python 3.9+
     rules = map(lambda rule: rule | {'regex': regular_definition_to_expression(rule['regex'], regular_definitions)},
                 rules)
 
-    rules = map(lambda rule: rule | {'nfa_definition': ENFA(regex=rule['regex']).export_definition()}, rules)
+    rules = map(lambda rule: rule | {'nfa_definition': ENFA(regex=rule['regex']).export_definition()},
+                rules)
 
-    print(list(rules))
+    pickle.dump(list(rules), open('analizator/rules.pkl', 'wb'))

@@ -1,14 +1,15 @@
 from collections import defaultdict
-from regex import split_by_or
+from .regex import split_by_or
+from .misc import find_closing_parent
 import copy
 
 
 class ENFA:
-    table = {}
-    active_states = []
-    acceptable_states = []
-
     def __init__(self, **kwargs):
+        self.table = {}
+        self.active_states = []
+        self.acceptable_states = []
+
         if regex := kwargs.get('regex', None):
             left_state, right_state = self._init_from_regex(regex)
             self.active_states.append(left_state)
@@ -27,6 +28,7 @@ class ENFA:
         if trigger is not None:
             self.table[source][trigger].append(target)
         else:
+            # print('-->', self.table, source, target)
             self.table[source]['eps'].append(target)
 
     def _init_from_regex(self, regex):
@@ -37,7 +39,7 @@ class ENFA:
 
         if len(or_choices) != 0:
             for choice in or_choices:
-                tmp_left, tmp_right = self.init_from_regex(choice)
+                tmp_left, tmp_right = self._init_from_regex(choice)
 
                 self._add_transition(left_state, tmp_left)
                 self._add_transition(tmp_right, right_state)
@@ -45,29 +47,44 @@ class ENFA:
             prefixed = False
             last_state = left_state
 
-            for i, c in enumerate(regex):
-                state_a, state_b = None, None
+            i = 0
+            while i < len(regex):
+                c = regex[i]
+
                 if prefixed:
-                    pass
+                    prefixed = False
+
+                    trigger = ''
+                    if regex[i] == 't':
+                        trigger = '\t'
+                    elif regex[i] == 'n':
+                        trigger = '\n'
+                    elif regex[i] == '_':
+                        trigger = ' '
+                    else:
+                        trigger = regex[i]
+
+                    state_a = self._add_state()
+                    state_b = self._add_state()
+                    self._add_transition(state_a, state_b, trigger)
                 else:
-                    if c == '\\':
+                    if regex[i] == '\\':
                         prefixed = True
                         continue
-                    if c != '(':
+                    if regex[i] != '(':
                         state_a = self._add_state()
                         state_b = self._add_state()
 
-                        if c == '$':
+                        if regex[i] == '$':
                             self._add_transition(state_a, state_b)
                         else:
-                            self._add_transition(state_a, state_b, c)
+                            self._add_transition(state_a, state_b, regex[i])
                     else:
-                        closing_parent = regex[i:].index(')')
-                        state_a, state_b = self.init_from_regex(regex[i+1:closing_parent-1])
+                        closing_parent = find_closing_parent(regex[i:])
+                        state_a, state_b = self._init_from_regex(regex[i + 1:i + closing_parent])
+                        i += closing_parent
 
-                        i = closing_parent
-
-                if i + 1 < len(regex) and regex[i+1] == '*':
+                if i + 1 < len(regex) and regex[i + 1] == '*':
                     state_x = state_a
                     state_y = state_b
 
@@ -83,8 +100,10 @@ class ENFA:
                 self._add_transition(last_state, state_a)
                 last_state = state_b
 
+                i += 1
+
             self._add_transition(last_state, right_state)
-            return left_state, right_state
+        return left_state, right_state
 
     def _init_from_definition(self, definition):
         self.table = definition['table']
@@ -97,3 +116,34 @@ class ENFA:
             'active_states': self.active_states.copy(),
             'acceptable_states': self.acceptable_states.copy()
         }
+
+    def _step(self, char):
+        new_active = set()
+
+        for state in self.active_states:
+            new_active = new_active.union(set(self.table[state][char]))
+
+            for eps_trans in self.table[state]['eps']:
+                new_active.add(eps_trans)
+
+                new_active = new_active.union(set(self.table[eps_trans]['eps']))
+
+        self.active_states = list(new_active)
+
+    def validate(self, string):
+        self._step('')
+
+        for c in string:
+            self._step(c)
+
+        # return len(set(self.active_states).intersection(set(self.acceptable_states))) != 0
+        return self.active_states
+
+
+if __name__ == '__main__':
+    nfa = ENFA(regex='(ab)*')
+
+    print(*nfa.export_definition()['table'].items(), sep='\n')
+    print(*nfa.export_definition()['acceptable_states'], sep='\n')
+    print(*nfa.export_definition()['active_states'], sep='\n')
+    print(nfa.validate('a'))
