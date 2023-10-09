@@ -1,5 +1,5 @@
 from util.ENFA import ENFA
-from util.regex import regular_definition_to_expression
+from lab1.util.helpers.regex import regular_definition_to_expression
 import pickle
 
 

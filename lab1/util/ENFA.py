@@ -1,6 +1,6 @@
 from collections import defaultdict
-from .regex import split_by_or
-from .misc import find_closing_parent
+from lab1.util.helpers.regex import split_by_or
+from lab1.util.helpers.misc import find_closing_parent
 import copy
 
 
@@ -12,9 +12,9 @@ class ENFA:
 
         if regex := kwargs.get('regex', None):
             left_state, right_state = self._init_from_regex(regex)
-            self.active_states.append(left_state)
-            self.acceptable_states.append(right_state)
 
+            self.active_states = self._activate_state(left_state)
+            self.acceptable_states.append(right_state)
         if table := kwargs.get('definition', None):
             self._init_from_definition(table)
 
@@ -28,7 +28,6 @@ class ENFA:
         if trigger is not None:
             self.table[source][trigger].append(target)
         else:
-            # print('-->', self.table, source, target)
             self.table[source]['eps'].append(target)
 
     def _init_from_regex(self, regex):
@@ -117,33 +116,41 @@ class ENFA:
             'acceptable_states': self.acceptable_states.copy()
         }
 
+    def _activate_state(self, state):
+        to_activate = [state]
+        new_active_states = []
+
+        while len(to_activate) != 0:
+            s = to_activate[0]
+
+            if s not in new_active_states:
+                new_active_states.append(s)
+
+            to_activate.extend(self.table[s]['eps'])
+            to_activate = list(set(to_activate[1:]))
+
+        return new_active_states
+
     def _step(self, char):
-        new_active = set()
+        new_active = []
 
         for state in self.active_states:
-            new_active = new_active.union(set(self.table[state][char]))
+            for new_state in self.table[state][char]:
+                new_active.extend(self._activate_state(new_state))
 
-            for eps_trans in self.table[state]['eps']:
-                new_active.add(eps_trans)
-
-                new_active = new_active.union(set(self.table[eps_trans]['eps']))
-
-        self.active_states = list(new_active)
+        self.active_states = new_active
 
     def validate(self, string):
-        self._step('')
-
         for c in string:
             self._step(c)
 
-        # return len(set(self.active_states).intersection(set(self.acceptable_states))) != 0
-        return self.active_states
+        return len(set(self.active_states).intersection(set(self.acceptable_states))) != 0
 
 
 if __name__ == '__main__':
-    nfa = ENFA(regex='(ab)*')
+    nfa = ENFA(regex='cd|(ab)*')
 
     print(*nfa.export_definition()['table'].items(), sep='\n')
-    print(*nfa.export_definition()['acceptable_states'], sep='\n')
-    print(*nfa.export_definition()['active_states'], sep='\n')
-    print(nfa.validate('a'))
+    print(*nfa.export_definition()['acceptable_states'])
+    print(*nfa.export_definition()['active_states'])
+    print(nfa.validate('abab'))
