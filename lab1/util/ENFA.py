@@ -9,14 +9,32 @@ class ENFA:
         self.table = {}
         self.active_states = []
         self.acceptable_states = []
+        self.original_active = None
 
         if regex := kwargs.get('regex', None):
             left_state, right_state = self._init_from_regex(regex)
 
-            self.active_states = self._activate_state(left_state)
+            self.original_active = left_state
             self.acceptable_states.append(right_state)
+
+            self._reset_automata()
         if table := kwargs.get('definition', None):
             self._init_from_definition(table)
+
+    def export_definition(self):
+        return {
+            'table': copy.deepcopy(self.table),
+            'active_states': self.active_states.copy(),
+            'acceptable_states': self.acceptable_states.copy(),
+            'original_active': self.original_active
+        }
+
+    def validate(self, string):
+        self._reset_automata()
+        for c in string:
+            self._step(c)
+
+        return len(set(self.active_states).intersection(set(self.acceptable_states))) != 0
 
     def _add_state(self):
         n_states = len(self.table.items())
@@ -48,12 +66,8 @@ class ENFA:
 
             i = 0
             while i < len(regex):
-                c = regex[i]
-
                 if prefixed:
                     prefixed = False
-
-                    trigger = ''
                     if regex[i] == 't':
                         trigger = '\t'
                     elif regex[i] == 'n':
@@ -98,7 +112,6 @@ class ENFA:
 
                 self._add_transition(last_state, state_a)
                 last_state = state_b
-
                 i += 1
 
             self._add_transition(last_state, right_state)
@@ -108,13 +121,10 @@ class ENFA:
         self.table = definition['table']
         self.active_states = definition['active_states']
         self.acceptable_states = definition['active_states']
+        self.original_active = definition['original_active']
 
-    def export_definition(self):
-        return {
-            'table': copy.deepcopy(self.table),
-            'active_states': self.active_states.copy(),
-            'acceptable_states': self.acceptable_states.copy()
-        }
+    def _reset_automata(self):
+        self.active_states = self._activate_state(self.original_active)
 
     def _activate_state(self, state):
         to_activate = [state]
@@ -140,17 +150,12 @@ class ENFA:
 
         self.active_states = new_active
 
-    def validate(self, string):
-        for c in string:
-            self._step(c)
-
-        return len(set(self.active_states).intersection(set(self.acceptable_states))) != 0
-
 
 if __name__ == '__main__':
-    nfa = ENFA(regex='cd|(ab)*')
+    nfa = ENFA(regex='c|(aa)*')
 
     print(*nfa.export_definition()['table'].items(), sep='\n')
     print(*nfa.export_definition()['acceptable_states'])
     print(*nfa.export_definition()['active_states'])
-    print(nfa.validate('abab'))
+
+    print(nfa.validate('ca'))
