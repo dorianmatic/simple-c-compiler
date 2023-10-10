@@ -30,6 +30,11 @@ class TestENFA(unittest.TestCase):
         self.assertFalse(enfa.validate('gh'))
         self.assertFalse(enfa.validate('efgh'))
 
+    def test_string_validation_4(self):
+        enfa = ENFA(regex='x')
+
+        self.assertTrue(enfa.validate('x'))
+
 
 if __name__ == '__main__':
     unittest.main()

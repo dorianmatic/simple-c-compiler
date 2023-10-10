@@ -33,10 +33,6 @@ def process_states(states):
     return states.split(' ')[1:]
 
 
-def process_lex_units(lex_units):
-    return lex_units.split(' ')[1:]
-
-
 def process_rule_line(rule, rule_line):
     rule_loaded = False
     if rule_line.startswith('<'):
@@ -73,7 +69,7 @@ if __name__ == '__main__':
         elif line_type == LineTypes.STATES:
             states = process_states(line)
         elif line_type == LineTypes.LEX_UNITS:
-            lex_units = process_lex_units(line)
+            pass
         elif line_type == LineTypes.RULE:
             rule, processed = process_rule_line(rule, line)
             if processed:
@@ -89,4 +85,9 @@ if __name__ == '__main__':
     rules = map(lambda rule: rule | {'nfa_definition': ENFA(regex=rule['regex']).export_definition()},
                 rules)
 
-    pickle.dump(list(rules), open('analizator/rules.pkl', 'wb'))
+    LA_definition = {
+        'init_state': states[0],
+        'rules': list(rules)
+    }
+
+    pickle.dump(LA_definition, open('analizator/LA_data.pkl', 'wb'))

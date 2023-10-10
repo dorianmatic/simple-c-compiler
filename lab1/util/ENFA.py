@@ -24,13 +24,13 @@ class ENFA:
     def export_definition(self):
         return {
             'table': copy.deepcopy(self.table),
-            'active_states': self.active_states.copy(),
             'acceptable_states': self.acceptable_states.copy(),
             'original_active': self.original_active
         }
 
     def validate(self, string):
         self._reset_automata()
+
         for c in string:
             self._step(c)
 
@@ -119,8 +119,7 @@ class ENFA:
 
     def _init_from_definition(self, definition):
         self.table = definition['table']
-        self.active_states = definition['active_states']
-        self.acceptable_states = definition['active_states']
+        self.acceptable_states = definition['acceptable_states']
         self.original_active = definition['original_active']
 
     def _reset_automata(self):
@@ -149,13 +148,3 @@ class ENFA:
                 new_active.extend(self._activate_state(new_state))
 
         self.active_states = new_active
-
-
-if __name__ == '__main__':
-    nfa = ENFA(regex='c|(aa)*')
-
-    print(*nfa.export_definition()['table'].items(), sep='\n')
-    print(*nfa.export_definition()['acceptable_states'])
-    print(*nfa.export_definition()['active_states'])
-
-    print(nfa.validate('ca'))

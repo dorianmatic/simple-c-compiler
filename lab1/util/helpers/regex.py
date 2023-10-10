@@ -11,6 +11,7 @@ def regular_definition_to_expression(definition, regular_definitions):
 
     return definition
 
+
 def unescaped(regex, position):
     backslash_n = 0
     for i in range(position, 0, -1):
