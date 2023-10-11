@@ -160,7 +160,7 @@ cython_debug/
 .idea/
 
 # Testing examples
-examples/
+lab1/examples/
 
 # Object serializations
 *.pkl

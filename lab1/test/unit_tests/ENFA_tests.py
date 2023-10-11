@@ -1,4 +1,4 @@
-from lab1.util.ENFA import ENFA
+from lab1.utils.ENFA import ENFA
 import unittest
 
 

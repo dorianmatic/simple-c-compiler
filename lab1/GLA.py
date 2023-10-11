@@ -1,5 +1,7 @@
-from util.ENFA import ENFA
-from lab1.util.helpers.regex import regular_definition_to_expression
+from pathlib import Path
+
+from utils.ENFA import ENFA
+from utils.regex import regular_definition_to_expression
 import pickle
 
 
@@ -61,22 +63,25 @@ if __name__ == '__main__':
     rule = create_empty_rule()
     rule_processing = False
 
-    while line := input():
-        line_type = identify_line(line, rule_processing)
+    try:
+        while line := input():
+            line_type = identify_line(line, rule_processing)
 
-        if line_type == LineTypes.DEFINITION:
-            regular_definitions.update(process_regular_definition(line))
-        elif line_type == LineTypes.STATES:
-            states = process_states(line)
-        elif line_type == LineTypes.LEX_UNITS:
-            pass
-        elif line_type == LineTypes.RULE:
-            rule, processed = process_rule_line(rule, line)
-            if processed:
-                rules.append(rule)
-                rule = create_empty_rule()
+            if line_type == LineTypes.DEFINITION:
+                regular_definitions.update(process_regular_definition(line))
+            elif line_type == LineTypes.STATES:
+                states = process_states(line)
+            elif line_type == LineTypes.LEX_UNITS:
+                pass
+            elif line_type == LineTypes.RULE:
+                rule, processed = process_rule_line(rule, line)
+                if processed:
+                    rules.append(rule)
+                    rule = create_empty_rule()
 
-            rule_processing = not processed
+                rule_processing = not processed
+    except EOFError:
+        pass
 
     # Note: this only works for Python 3.9+
     rules = map(lambda rule: rule | {'regex': regular_definition_to_expression(rule['regex'], regular_definitions)},
@@ -90,4 +95,4 @@ if __name__ == '__main__':
         'rules': list(rules)
     }
 
-    pickle.dump(LA_definition, open('analizator/LA_data.pkl', 'wb'))
+    pickle.dump(LA_definition, Path(__file__).parent.joinpath('analizator', 'LA_data.pkl').open('wb'))

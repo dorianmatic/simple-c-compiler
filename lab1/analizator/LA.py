@@ -1,5 +1,10 @@
+import sys
+from pathlib import Path
+
+sys.path.append('..')
+
 import pickle
-from lab1.util.ENFA import ENFA
+from lab1.utils.ENFA import ENFA
 
 
 class LexicalAnalyzer:
@@ -27,7 +32,7 @@ class LexicalAnalyzer:
             rule = self._first_applicable_rule(self.source[cursor:cursor + ran])
             lex_unit, offset = self._apply_rule(rule)
 
-            yield self.source[cursor:cursor + (offset or ran)], self.line_n, lex_unit
+            yield lex_unit, self.line_n, self.source[cursor:cursor + (offset or ran)]
             cursor += offset or ran
 
     def _apply_rule(self, rule):
@@ -51,12 +56,15 @@ class LexicalAnalyzer:
 
 
 if __name__ == '__main__':
-    data = pickle.load(open('LA_data.pkl', 'rb'))
+    data = pickle.load(Path(__file__).parent.joinpath('LA_data.pkl').open('rb'))
     rules = list(map(lambda rule: rule | {'nfa': ENFA(definition=rule['nfa_definition'])}, data['rules']))
 
     source = ""
-    while source_line := input():
-        source += source_line
+    try:
+        while source_line := input():
+            source += source_line
+    except EOFError:
+        pass
 
     la = LexicalAnalyzer(rules, source, data['init_state'])
     for out in la.analyze():

@@ -1,6 +1,6 @@
 from collections import defaultdict
-from lab1.util.helpers.regex import split_by_or
-from lab1.util.helpers.misc import find_closing_parent
+from .regex import split_by_or
+from .misc import find_closing_parent
 import copy
 
 
