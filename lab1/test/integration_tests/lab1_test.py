@@ -61,7 +61,6 @@ for test_case_path in test_case_directories(examples_path):
     print_process_result(generator_result)
 
     expected = ''.join(la_output_path.open().readlines())
-    print(expected, '------', lex_analyzer_result.stdout)
     if expected == lex_analyzer_result.stdout:
         print(f"{bcolors.OKGREEN}Passed.{bcolors.ENDC}")
         passed += 1

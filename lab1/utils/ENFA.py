@@ -83,6 +83,7 @@ class ENFA:
                 else:
                     if regex[i] == '\\':
                         prefixed = True
+                        i += 1
                         continue
                     if regex[i] != '(':
                         state_a = self._add_state()

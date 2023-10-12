@@ -31,9 +31,16 @@ class TestENFA(unittest.TestCase):
         self.assertFalse(enfa.validate('efgh'))
 
     def test_string_validation_4(self):
-        enfa = ENFA(regex='x')
+        enfa = ENFA(regex='o(ab|bc|ca)*')
 
-        self.assertTrue(enfa.validate('x'))
+        self.assertTrue(enfa.validate('oabbcca'))
+        self.assertTrue(enfa.validate('ocacaca'))
+
+    def test_string_validation_5(self):
+        enfa = ENFA(regex='\n')
+
+        self.assertTrue(enfa.validate('\n'))
+        self.assertFalse(enfa.validate('ocacaca'))
 
 
 if __name__ == '__main__':

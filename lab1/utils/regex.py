@@ -2,7 +2,7 @@ import re
 
 
 def regular_definition_to_expression(definition, regular_definitions):
-    while match := re.search(r'\{.*?\}', definition):
+    while match := re.search(r'\{[a-z|A-Z]*?\}', definition):
         exp_before = definition[:match.span()[0]]
         exp_after = definition[match.span()[1]:]
         other_exp = regular_definitions[match.group()]
@@ -12,14 +12,15 @@ def regular_definition_to_expression(definition, regular_definitions):
     return definition
 
 
-def unescaped(regex, position):
+def escaped(regex, position):
     backslash_n = 0
-    for i in range(position, 0, -1):
-        if regex[position] != '\\': break
+    for i in range(position-1, -1, -1):
+        if regex[i] != '\\':
+            break
 
         backslash_n += 1
 
-    return backslash_n % 2 == 0
+    return backslash_n % 2 == 1
 
 
 def split_by_or(regex):
@@ -28,7 +29,8 @@ def split_by_or(regex):
     prev_choice = 0
 
     for i, c in enumerate(regex):
-        if not unescaped(regex, i): continue
+        if escaped(regex, i):
+            continue
 
         if c == '(':
             parentheses += 1
