@@ -16,29 +16,45 @@ class LexicalAnalyzer:
         self.line_n = 1
 
     def analyze(self):
+        """Perform lexical analysis on the source."""
+
         cursor = 0
         while cursor != len(source):
             prefix_with_applicable_rule = 0
-            ran = 1
-            while cursor + ran <= len(source):
-                if self._first_applicable_rule(self.source[cursor:cursor + ran]):
-                    prefix_with_applicable_rule = ran
-                ran += 1
-            ran -= 1
 
-            # Perform error recovery
+            # Find the longest prefix that has an applicable rule, start from the end of source code
+            ran = 1
+            active_rules = self._get_active_rules_for_state()
+            applicable_rule = None
+            while cursor + ran < len(source):
+                new_active_rules, new_applicable_rule = self._refine_active_rules(active_rules,
+                                                                                  source[cursor:cursor + ran])
+                if len(new_active_rules) != 0:
+                    active_rules = new_active_rules
+                else:
+                    break
+
+                if new_applicable_rule:
+                    applicable_rule = new_applicable_rule
+                    prefix_with_applicable_rule = ran
+
+                ran += 1
+
+            # If there is no prefix with an applicable rule, perform error recovery by ignoring the first symbol
             if prefix_with_applicable_rule == 0:
                 cursor += 1
                 continue
 
-            rule = self._first_applicable_rule(self.source[cursor:cursor + prefix_with_applicable_rule])
-            lex_unit, offset = self._apply_rule(rule)
+            lex_unit, offset = self._apply_rule(applicable_rule)
 
+            # Don't yield if the lexical unit is '-', that unit should be discarded (e.g. whitespace)
             if lex_unit != '-':
                 yield lex_unit, self.line_n, self.source[cursor:cursor + (offset or prefix_with_applicable_rule)]
             cursor += offset or prefix_with_applicable_rule
 
     def _apply_rule(self, rule):
+        """Apply provided analyzer rule."""
+
         offset = 0
         for action in rule['actions'][1:]:
             if action.startswith('NOVI_REDAK'):
@@ -50,24 +66,34 @@ class LexicalAnalyzer:
 
         return rule['actions'][0], offset
 
-    def _first_applicable_rule(self, source_segment):
-        # print('########', repr(source_segment))
-        i = 0
+    def _refine_active_rules(self, active_rules, source_segment):
+        """Find the first applicable rule for a given source segment taking into account the current analyzer state."""
 
-        for rule in filter(lambda rule: rule['state'] == self.state, self.rules):
-            # print(f"--{i} {repr(rule['regex'])} {rule['actions']}")
-            if rule['nfa'].validate(source_segment):
-                return rule
-            i += 1
+        new_active_rules = []
+        first_applicable = None
+        for rule in active_rules:
+            validation_result = rule['nfa'].validate(source_segment)
 
-        return None
+            if validation_result == 'match' and first_applicable is None:
+                first_applicable = rule
+
+            if validation_result != 'no-match':
+                new_active_rules.append(rule)
+
+        return new_active_rules, first_applicable
+
+    def _get_active_rules_for_state(self):
+        return list(filter(lambda rule: rule['state'] == self.state, self.rules))
 
 
 if __name__ == '__main__':
     data = pickle.load(Path(__file__).parent.joinpath('LA_data.pkl').open('rb'))
     rules = list(map(lambda rule: rule | {'nfa': ENFA(definition=rule['nfa_definition'])}, data['rules']))
 
-    source = sys.stdin.read()
+    source = ''
+    for line in sys.stdin:
+        source += line
+
     la = LexicalAnalyzer(rules, source, data['init_state'])
     for out in la.analyze():
         print(*out)

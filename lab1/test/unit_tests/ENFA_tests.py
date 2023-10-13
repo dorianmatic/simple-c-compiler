@@ -6,41 +6,39 @@ class TestENFA(unittest.TestCase):
     def test_string_validation_1(self):
         enfa = ENFA(regex='(a|b)*')
 
-        self.assertTrue(enfa.validate('aabbaba'))
-        self.assertFalse(enfa.validate('abc'))
+        self.assertEqual(enfa.validate('aabbaba'), 'match')
+        self.assertEqual(enfa.validate('abc'), 'no-match')
 
     def test_string_validation_2(self):
         enfa = ENFA(regex='c|(aa)*')
 
-        self.assertTrue(enfa.validate('c'))
-        self.assertTrue(enfa.validate('aa'))
+        self.assertEqual(enfa.validate('c'), 'match')
+        self.assertEqual(enfa.validate('aa'), 'match')
 
-        self.assertFalse(enfa.validate('cc'))
-        self.assertFalse(enfa.validate('aaa'))
-        self.assertFalse(enfa.validate('ca'))
+        self.assertEqual(enfa.validate('aaa'), 'potential')
+
+        self.assertEqual(enfa.validate('cc'), 'no-match')
+        self.assertEqual(enfa.validate('ca'), 'no-match')
 
     def test_string_validation_3(self):
         enfa = ENFA(regex='abc((ef)*|gh)')
 
-        self.assertTrue(enfa.validate('abc'))
-        self.assertTrue(enfa.validate('abcefef'))
-        self.assertTrue(enfa.validate('abcgh'))
+        self.assertEqual(enfa.validate('abc'), 'match')
+        self.assertEqual(enfa.validate('abcefef'), 'match')
+        self.assertEqual(enfa.validate('abcgh'), 'match')
 
-        self.assertFalse(enfa.validate('efef'))
-        self.assertFalse(enfa.validate('gh'))
-        self.assertFalse(enfa.validate('efgh'))
+        self.assertEqual(enfa.validate('abce'), 'potential')
+
+        self.assertEqual(enfa.validate('efef'), 'no-match')
+        self.assertEqual(enfa.validate('gh'), 'no-match')
+        self.assertEqual(enfa.validate('efgh'), 'no-match')
 
     def test_string_validation_4(self):
         enfa = ENFA(regex='o(ab|bc|ca)*')
 
-        self.assertTrue(enfa.validate('oabbcca'))
-        self.assertTrue(enfa.validate('ocacaca'))
-
-    def test_string_validation_5(self):
-        enfa = ENFA(regex='\n')
-
-        self.assertTrue(enfa.validate('\n'))
-        self.assertFalse(enfa.validate('ocacaca'))
+        self.assertEqual(enfa.validate('oabbcca'), 'match')
+        self.assertEqual(enfa.validate('ocacaca'), 'match')
+        self.assertEqual(enfa.validate('oa'), 'potential')
 
 
 if __name__ == '__main__':

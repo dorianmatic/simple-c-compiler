@@ -1,5 +1,6 @@
 import argparse
 import subprocess
+import time
 from pathlib import Path
 
 class bcolors:
@@ -20,12 +21,21 @@ def test_case_directories(top_level_path):
             yield path
 
 
-def print_process_result(result):
+def print_process_result(result, time_elapsed):
     if result.returncode == 0:
-        print(f"{bcolors.OKGREEN}OK{bcolors.ENDC}")
+        print(f"{bcolors.OKGREEN}OK{bcolors.ENDC}", end=' ')
     else:
-        print(f"{bcolors.FAIL}FAIL")
-        print(f"{result.stderr}{bcolors.ENDC}")
+        print(f"{bcolors.FAIL}FAIL", end=' ')
+
+    print(f"{bcolors.OKCYAN}[{time_elapsed}s]{bcolors.ENDC}")
+
+
+def run(script, input_path):
+    start_time = time.time()
+    result = subprocess.run(['python', script], text=True, capture_output=True, stdin=input_path.open())
+    print_process_result(result, time.time() - start_time)
+
+    return result
 
 
 parser = argparse.ArgumentParser()
@@ -42,6 +52,7 @@ lex_analyzer_script = args.analyzer or Path(__file__).parents[2].joinpath('anali
 total = 0
 passed = 0
 
+begin_time = time.time()
 for test_case_path in test_case_directories(examples_path):
     total += 1
 
@@ -51,14 +62,10 @@ for test_case_path in test_case_directories(examples_path):
     la_output_path = test_case_path.joinpath('test.out')
 
     print(f"Running generator... ", end='')
-    generator_result = subprocess.run(['python', generator_script], text=True, capture_output=True,
-                                      stdin=lang_definition_path.open())
-    print_process_result(generator_result)
+    run(generator_script, lang_definition_path)
 
     print(f"Running analyzer... ", end='')
-    lex_analyzer_result = subprocess.run(['python', lex_analyzer_script], text=True, capture_output=True,
-                                         stdin=la_input_path.open())
-    print_process_result(generator_result)
+    lex_analyzer_result = run(lex_analyzer_script, la_input_path)
 
     expected = ''.join(la_output_path.open().readlines())
     if expected == lex_analyzer_result.stdout:
@@ -68,4 +75,6 @@ for test_case_path in test_case_directories(examples_path):
         print(f"{bcolors.FAIL}Failed.{bcolors.ENDC}")
 
 
-print(f"{bcolors.OKBLUE}==== Passed: {passed}/{total} ===={bcolors.ENDC}")
+print(f"{bcolors.OKBLUE}============================{bcolors.ENDC}")
+print(f"Passed: {passed}/{total}")
+print(f"Time elapsed: {time.time() - begin_time}s")
