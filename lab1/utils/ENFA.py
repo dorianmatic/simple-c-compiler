@@ -33,7 +33,15 @@ class ENFA:
         }
 
     def validate(self, string):
-        """Validate a string using the automata."""
+        """ Validates a string using the automata.
+
+            Returns one of three values:
+            1. 'match' - after validation there is an active state that is also acceptable
+            2. 'potential' - after validation there are some states, none are acceptable. If more symbols are read,
+            this NFA could move into an acceptable state.
+            3. 'no-match' - there are no active states. It's impossible for this NFA to move into an acceptable state.
+
+        """
 
         self._reset_automata()
 
@@ -63,7 +71,7 @@ class ENFA:
             self.table[source]['eps'].append(target)
 
     def _init_from_regex(self, regex):
-        """Initialize the automata from a regex in a recursive way."""
+        """Initialize the automata from a regex in a recursive way. Algorithm provided."""
 
         or_choices = split_by_or(regex)
 

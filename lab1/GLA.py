@@ -1,12 +1,13 @@
 import sys
 from pathlib import Path
-
+import pickle
 from utils.ENFA import ENFA
 from utils.regex import regular_definition_to_expression
-import pickle
 
 
 class LineTypes:
+    """ Enum for different line types."""
+
     DEFINITION = 'definition'
     STATES = 'states'
     LEX_UNITS = 'lex units'
@@ -14,6 +15,8 @@ class LineTypes:
 
 
 def identify_line(line, in_rule):
+    """ Identify the current line, if rule loading is in progress - return RULE."""
+
     if line.startswith('<') or in_rule:
         return LineTypes.RULE
     if line.startswith('{'):
@@ -37,6 +40,9 @@ def process_states(states):
 
 
 def process_rule_line(rule, rule_line):
+    """ This function identifies what part of a rule is currently being loaded (action or regex) and act's accordingly.
+    """
+
     rule_loaded = False
     if rule_line.startswith('<'):
         s = rule_line.index('>')

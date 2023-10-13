@@ -1,9 +1,9 @@
 import sys
+import pickle
 from pathlib import Path
 
+# A hack needed to import from the parent folder
 sys.path.append('..')
-
-import pickle
 from lab1.utils.ENFA import ENFA
 
 
@@ -16,15 +16,23 @@ class LexicalAnalyzer:
         self.line_n = 1
 
     def analyze(self):
-        """Perform lexical analysis on the source."""
+        """ Yields to caller lexical units from the source code.
+
+        Finds lexical units by using Longest prefix matching rule:
+        1. Start by getting all the rules for the current state.
+        2. Refine that list by reading source symbols one by one, until no rules are applicable.
+        3. Apply the first rule for the longest prefix that had an applicable rule. If there is none, perform error recovery.
+        4. Yield the lexical unit, line number and source segment.
+        5. Repeat until the end on source code.
+
+        """
 
         cursor = 0
         while cursor != len(source):
+            # Find the longest prefix that has an applicable rule. For each step, keep list of possible rules.
             prefix_with_applicable_rule = 0
-
-            # Find the longest prefix that has an applicable rule, start from the end of source code
-            ran = 1
             active_rules = self._get_active_rules_for_state()
+            ran = 1
             applicable_rule = None
             while cursor + ran < len(source):
                 new_active_rules, new_applicable_rule = self._refine_active_rules(active_rules,
@@ -66,8 +74,12 @@ class LexicalAnalyzer:
 
         return rule['actions'][0], offset
 
-    def _refine_active_rules(self, active_rules, source_segment):
-        """Find the first applicable rule for a given source segment taking into account the current analyzer state."""
+    @staticmethod
+    def _refine_active_rules(active_rules, source_segment):
+        """
+         Refine the list of currently active rules by keeping only the ones that return 'potential' or 'match' when
+         evaluated on the source segment.
+        """
 
         new_active_rules = []
         first_applicable = None
@@ -87,6 +99,7 @@ class LexicalAnalyzer:
 
 
 if __name__ == '__main__':
+    # Load date that was serialized by GLA and re-build the automata
     data = pickle.load(Path(__file__).parent.joinpath('LA_data.pkl').open('rb'))
     rules = list(map(lambda rule: rule | {'nfa': ENFA(definition=rule['nfa_definition'])}, data['rules']))
 
