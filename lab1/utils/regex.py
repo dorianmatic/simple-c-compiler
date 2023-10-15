@@ -2,6 +2,11 @@ import re
 
 
 def regular_definition_to_expression(definition, regular_definitions):
+    """
+    Converts the regular definition into a regular expression. Also, resolves all the other definition the given
+    definition might reference.
+    """
+
     while match := re.search(r'\{[a-z|A-Z]*?\}', definition):
         exp_before = definition[:match.span()[0]]
         exp_after = definition[match.span()[1]:]
@@ -13,6 +18,8 @@ def regular_definition_to_expression(definition, regular_definitions):
 
 
 def escaped(regex, position):
+    """Checks if the symbol in a given position in the regex is escaped by '\' or not."""
+
     backslash_n = 0
     for i in range(position-1, -1, -1):
         if regex[i] != '\\':
@@ -24,6 +31,8 @@ def escaped(regex, position):
 
 
 def split_by_or(regex):
+    """Splits the regex by top-level pipes - '|'."""
+
     parentheses = 0
     or_choices = []
     prev_choice = 0
