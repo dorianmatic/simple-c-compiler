@@ -73,9 +73,12 @@ class LRParserTest(unittest.TestCase):
         parser = LRParser(actions=actions, new_states=new_states)
 
         self.assertTrue(parser.parse(['var', '+', 'var', '*', 'var']))
+        parser.init_stack()
         self.assertTrue(parser.parse(['var', '+', 'var', '*', 'var', '+', 'var']))
+        parser.init_stack()
         self.assertTrue(parser.parse(['(', 'var' , ')', '*', 'var', '+', '(', 'var', '+', 'var', ')']))
 
+        parser.init_stack()
         self.assertFalse(parser.parse(['var', '+', 'var', '*', 'var', '+', '*']))
 
     def test_tree(self):

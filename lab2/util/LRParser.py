@@ -8,11 +8,15 @@ class ActionsEnum:
 
 
 class Node:
+    """Syntax Tree Node"""
+
     def __init__(self, values):
         self.values = values
 
     @classmethod
     def from_nodes(cls, nodes, value):
+        """Create a node from child nodes by prepending whitespace to every child."""
+
         values = [value]
 
         for n in nodes:
@@ -36,6 +40,14 @@ class LRParser:
 
         self.actions = actions
         self.new_states = new_states
+        self.stack = deque([0])
+
+    def init_stack(self):
+        """
+        Initialize the stack by setting the first (and only value) to zero.
+        """
+
+        self.stack = deque([0])
 
     def parse(self, string, tree=False):
         """
@@ -43,31 +55,30 @@ class LRParser:
         """
 
         string = string + ['$']
-        stack = deque([0])
         
         while True:
             a = string[0]
-            s = stack[-1]
+            s = self.stack[-1]
 
             action = self.actions[s].get(a, None)
             if action is None:
                 return False
             elif action['type'] == ActionsEnum.MOVE:
-                stack.append(a)
-                stack.append(Node([a]))
-                stack.append(action['new_state'])
+                self.stack.append(a)
+                self.stack.append(Node([a]))
+                self.stack.append(action['new_state'])
                 string = string[1:]
             elif action['type'] == ActionsEnum.REDUCE:
-                popped = [stack.pop() for _ in range(3*len(action['right']))]
+                popped = [self.stack.pop() for _ in range(3*len(action['right']))]
                 nodes = filter(lambda x: type(x) == Node, popped)
 
-                s = stack[-1]
-                stack.append(action['left'])
-                stack.append(Node.from_nodes(nodes, action['left']))
-                stack.append(self.new_states[s][action['left']])
+                s = self.stack[-1]
+                self.stack.append(action['left'])
+                self.stack.append(Node.from_nodes(nodes, action['left']))
+                self.stack.append(self.new_states[s][action['left']])
 
             elif action['type'] == ActionsEnum.ACCEPT:
                 if tree:
-                    return '\n'.join(stack[-2].values)
+                    return '\n'.join(self.stack[-2].values)
                 else:
                     return True
