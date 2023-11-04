@@ -29,7 +29,7 @@ class Node:
 class LRParser:
     """LR Parser implementation."""
 
-    def __init__(self, actions, new_states):
+    def __init__(self, actions, new_states, sequence):
         """
         Initialize LR parser from the list of action, state transitions
 
@@ -41,6 +41,7 @@ class LRParser:
         self.actions = actions
         self.new_states = new_states
         self.stack = deque([0])
+        self.sequence = sequence
 
     def init_stack(self):
         """
@@ -49,36 +50,54 @@ class LRParser:
 
         self.stack = deque([0])
 
-    def parse(self, string, tree=False):
+    def parse(self):
         """
-        Parse the input string.
+        Parse the input sequence.
+
+        Returns:
+            True if the string is successfully parsed, False otherwise
         """
 
-        string = string + ['$']
+        if self.sequence[-1] != '$':
+            self.sequence.append('$')
         
         while True:
-            a = string[0]
-            s = self.stack[-1]
+            seq_element = self.sequence[0]
+            current_state = self.stack[-1]
 
-            action = self.actions[s].get(a, None)
+            action = self.actions[current_state].get(seq_element, None)
             if action is None:
                 return False
             elif action['type'] == ActionsEnum.MOVE:
-                self.stack.append(a)
-                self.stack.append(Node([a]))
+                self.stack.append(seq_element)
+                self.stack.append(Node([seq_element]))
                 self.stack.append(action['new_state'])
-                string = string[1:]
+                self.sequence = self.sequence[1:]
             elif action['type'] == ActionsEnum.REDUCE:
                 popped = [self.stack.pop() for _ in range(3*len(action['right']))]
                 nodes = filter(lambda x: type(x) == Node, popped)
 
-                s = self.stack[-1]
+                current_state = self.stack[-1]
                 self.stack.append(action['left'])
                 self.stack.append(Node.from_nodes(nodes, action['left']))
-                self.stack.append(self.new_states[s][action['left']])
+                self.stack.append(self.new_states[current_state][action['left']])
 
             elif action['type'] == ActionsEnum.ACCEPT:
-                if tree:
-                    return '\n'.join(self.stack[-2].values)
-                else:
-                    return True
+                return True
+
+    def get_sequence(self):
+        """
+        Returns the unparsed part of the input sequence.
+        """
+
+        return self.sequence
+
+    def set_sequence(self, sequence):
+        self.sequence = sequence
+
+    def get_tree(self):
+        """
+        Returns the parse tree after a successful parse.
+        """
+
+        return '\n'.join(self.stack[-2].values)

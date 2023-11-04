@@ -70,16 +70,21 @@ new_states = [
 
 class LRParserTest(unittest.TestCase):
     def test_parser(self):
-        parser = LRParser(actions=actions, new_states=new_states)
+        parser = LRParser(actions=actions, new_states=new_states, sequence=['var', '+', 'var', '*', 'var'])
 
-        self.assertTrue(parser.parse(['var', '+', 'var', '*', 'var']))
-        parser.init_stack()
-        self.assertTrue(parser.parse(['var', '+', 'var', '*', 'var', '+', 'var']))
-        parser.init_stack()
-        self.assertTrue(parser.parse(['(', 'var' , ')', '*', 'var', '+', '(', 'var', '+', 'var', ')']))
+        self.assertTrue(parser.parse())
 
         parser.init_stack()
-        self.assertFalse(parser.parse(['var', '+', 'var', '*', 'var', '+', '*']))
+        parser.set_sequence(['var', '+', 'var', '*', 'var', '+', 'var'])
+        self.assertTrue(parser.parse())
+
+        parser.init_stack()
+        parser.set_sequence(['(', 'var' , ')', '*', 'var', '+', '(', 'var', '+', 'var', ')'])
+        self.assertTrue(parser.parse())
+
+        parser.init_stack()
+        parser.set_sequence(['var', '+', 'var', '*', 'var', '+', '*'])
+        self.assertFalse(parser.parse())
 
     def test_tree(self):
         tree = """E
@@ -95,5 +100,7 @@ class LRParserTest(unittest.TestCase):
   T
    F
     var"""
-        parser = LRParser(actions=actions, new_states=new_states)
-        self.assertEqual(parser.parse(['var', '+', 'var', '*', 'var'], tree=True), tree)
+
+        parser = LRParser(actions=actions, new_states=new_states, sequence=['var', '+', 'var', '*', 'var'])
+        parser.parse()
+        self.assertEqual(parser.get_tree(), tree)
