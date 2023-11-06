@@ -82,7 +82,7 @@ class DKA:
         nka_transitions = self.enka_to_nka()
         dka_transitions = list(nka_transitions)
         dka_states = [[state] for state in self.enka_states]
-        dka_states.append(list(filter(lambda x: x['state']==dka_states[0][0], self.epsilon_list()))[0]['epsilon'])
+        dka_states[0]=(list(filter(lambda x: x['state']==dka_states[0][0], self.epsilon_list()))[0]['epsilon'])
         for transition in nka_transitions:
             input_state = transition['state']
             #print(f"input_states = {input_state}")
@@ -104,10 +104,10 @@ class DKA:
                         dka_transitions.append(transition)
                         in_check = self.union_list_dict([transition['state']],[transition['delta'][0]])
                         dka_states = self.union_list_dict(dka_states,in_check)
-        for i in dka_transitions:
-            print(f"DKA prijelaz = {i}\n")
-        print(len(dka_transitions))
-        print(f"\n DKA STATES : {dka_states}")
+        # for i in dka_transitions:
+        #     print(f"DKA prijelaz = {i}\n")
+        # print(len(dka_transitions))
+        # print(f"\n DKA STATES : {dka_states}")
         return dka_transitions, dka_states
 
     
@@ -115,17 +115,42 @@ class DKA:
         dka_transitions, dka_states = self.nka_to_dka()
         state_numeric_dict  = {}
         num = 0
+        dka_states_temp = list(dka_states)
+        #ne uključujući početno stanje
+        for states in dka_states_temp[1:]:
+            # all transitions which end in states
+            transitions_end = list(filter(lambda x: x['state']==states, dka_transitions))
+            if len(transitions_end)==0 and states in dka_states:
+                dka_states.remove(states)
         dka_transitions_temp = list(dka_transitions)
         for transition in dka_transitions_temp:
             if isinstance(transition['delta'][0],dict):
-                same_char_state = list(filter(lambda x: isinstance(x['delta'][0],list) and transition['delta'][0] in x['delta'][0] and transition['state']==x['state'],dka_transitions))
-                if len(same_char_state)>0:
+                same_char_state = list(filter(lambda x: isinstance(x['delta'][0],list) and transition['delta'][0] in x['delta'][0] and transition['state']==x['state'] and transition['delta'][1]==x['delta'][1],dka_transitions))
+                if len(same_char_state)>0 and transition in dka_transitions:
                     dka_transitions.remove(transition)
+               
+                if  [transition['delta'][0]] in dka_states:
+                    dka_states.remove([transition['delta'][0]])
+
+        for i in range(len(dka_states)):
+            state_numeric_dict[i]=dka_states[i]
+        print(f"\n {state_numeric_dict}")
         for t in dka_transitions:
-            print(f"\n trans = {t}")
+            state1 = t['delta'][0]
+            state2 = t['state']
+            if isinstance(state1,dict):
+                state1 = [state1]
+            key_state1 = [key for key, value in state_numeric_dict.items() if value == state1]
+            key_state2 = [key for key, value in state_numeric_dict.items() if value == state2]
             
+            t['state']= key_state2[0]
+            t['delta'][0]=key_state1[0]
         
+            
+        print(state_numeric_dict)
         #preuredi dka_transitions
-        return
+        for t in dka_transitions:
+            print(f"transition : {t}")
+        return state_numeric_dict, dka_transitions
 
        
