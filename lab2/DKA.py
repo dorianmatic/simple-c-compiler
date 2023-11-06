@@ -112,6 +112,8 @@ class DKA:
 
     
     def dka_minimizacija(self):
+        #ne valja nesto u minimizaciji, krivo izbacujem stanja i produkcije...
+        #HELP :(
         dka_transitions, dka_states = self.nka_to_dka()
         state_numeric_dict  = {}
         num = 0
