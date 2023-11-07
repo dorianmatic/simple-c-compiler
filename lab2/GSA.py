@@ -2,65 +2,75 @@ import sys
 import fileinput
 from pathlib import Path
 import pickle
+from StartSet import *
+from DKA import *
 
 
 class LineTypes:
-    """ Enum for different line types."""
+    """Enum for different line types."""
 
-    TERMINAL = 'terminal '
-    NONTERMINAL = 'non-terminal'
-    SYN = 'syn'
-    PRODUCTION = 'production'
+    TERMINAL = "terminal "
+    NONTERMINAL = "non-terminal"
+    SYN = "syn"
+    PRODUCTION = "production"
 
 
 def identify_line(line):
-    """ Identify the current line. """
+    """Identify the current line."""
 
-    if line.startswith('<') or line.startswith(' '):
+    if line.startswith("<") or line.startswith(" "):
         return LineTypes.PRODUCTION
-    if line.startswith('%Syn'):
+    if line.startswith("%Syn"):
         return LineTypes.SYN
-    if line.startswith('%V'):
+    if line.startswith("%V"):
         return LineTypes.NONTERMINAL
-    if line.startswith('%T'):
+    if line.startswith("%T"):
         return LineTypes.TERMINAL
 
     return None
 
 
-
 def process_symbols(symbols):
-    return symbols.strip().split(' ')[1:]
+    return symbols.strip().split(" ")[1:]
 
 
 def process_production_line(production, production_line, left):
-    """ A function which adds production rules to the production list.
-    """
-    if production_line.startswith('<'):
+    """A function which adds production rules to the production list."""
+    if production_line.startswith("<"):
         newLeftSymbol = True
         left = production_line.strip()
-    elif production_line.startswith(' '):
+    elif production_line.startswith(" "):
         newLeftSymbol = False
-        right = production_line.strip().split(' ')
-        production['left']=left
-        production['right']=right
+        right = production_line.strip().split(" ")
+        production["left"] = left
+        production["right"] = right
 
     return production, left, newLeftSymbol
 
 
 def create_empty_production():
-    return {'left': '', 'right': []}
+    return {"left": "", "right": []}
 
 
-if __name__ == '__main__':
+def add_starting_production(nonterminals, productions):
+    """Adding an artificial starting nonterminal and starting production per instructions on pg. 31"""
+    starting_nonterminal = "<S0>"
+    production = {"left": starting_nonterminal, "right": [nonterminals[0]]}
+    nonterminals.insert(0, starting_nonterminal)
+    productions.insert(0, production)
+    return nonterminals, productions
+
+
+if __name__ == "__main__":
     productions = []
-    left = ''
+    left = ""
     production = create_empty_production()
     production_processing = False
     for line in fileinput.input():
         line_type = identify_line(line)
 
         if line_type == LineTypes.NONTERMINAL:
+            # podrazumijeva se da je nonterminals[0]==pocetni nezavrsni znak
             nonterminals = process_symbols(line)
         elif line_type == LineTypes.TERMINAL:
             terminals = process_symbols(line)
@@ -68,21 +78,19 @@ if __name__ == '__main__':
             sync_nonterminals = process_symbols(line)
             pass
         elif line_type == LineTypes.PRODUCTION:
-            production, left, newLeftSymbol = process_production_line(production, line, left)
+            production, left, newLeftSymbol = process_production_line(
+                production, line, left
+            )
             if not newLeftSymbol:
                 productions.append(production)
             production = create_empty_production()
 
+    nonterminals, productions = add_starting_production(nonterminals, productions)
+    ENKA_utils = ENKA(productions, terminals, nonterminals)
+    
 
-    # Note: this only works for Python 3.9+
-    # rules = map(lambda rule: rule | {'regex': regular_definition_to_expression(rule['regex'], regular_definitions)},
-    #             rules)
-    # rules = map(lambda rule: rule | {'nfa_definition': ENFA(regex=rule['regex']).export_definition()},
-    #             rules)
-
-    # LA_definition = {
-    #     'init_state': states[0],
-    #     'rules': list(rules)
-    # }
-
-    # pickle.dump(LA_definition, Path(__file__).parent.joinpath('analizator', 'SA_data.pkl').open('wb'))
+    enka_transitions,state_with_terminals = ENKA_utils.construct_enka_transitions()
+    DKA_utils = DKA(productions, terminals, nonterminals)
+    #DKA_utils.enka_to_nka()
+    DKA_utils.nka_to_dka()
+    DKA_utils.dka_minimizacija()
