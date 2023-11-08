@@ -1,5 +1,6 @@
 from ENKA import *
 from StartSet import *
+import itertools
 
 class DKA:
     """Izgradi DKA iz ENKA"""
@@ -10,6 +11,9 @@ class DKA:
         self.enka_utils = ENKA(self.productions,self.terminals,self.nonterminals)
         self.enka_transitions, self.enka_states = self.enka_utils.construct_enka_transitions()
         self.input_characters = self.terminals + self.nonterminals
+        self.epsilon_list = self.get_epsilon_list()
+        self.dka_start_state = list(filter(lambda x: x['state']==self.enka_states[0], self.epsilon_list))[0]['epsilon']
+        print(self.enka_states)
     
     def epsilon_surrounding(self, starting_state, states, epsilon):
         
@@ -31,7 +35,7 @@ class DKA:
 
             return  self.epsilon_surrounding(starting_state=test_values,states=states,epsilon=epsilon)
         
-    def epsilon_list(self):
+    def get_epsilon_list(self):
         epsilon_dict = []
         for state in self.enka_states:
             epsilon = self.epsilon_surrounding(states=[state],starting_state=state,epsilon=True)
@@ -39,6 +43,7 @@ class DKA:
             epsilon_dict.append(dict_pair)
         return epsilon_dict
     
+    #ova union funkcija je upitna dosta
     def union_list_dict(self,list1,list2):
         union_list = list(list1)
         for el in list2:
@@ -49,7 +54,7 @@ class DKA:
     def enka_to_nka(self):
 
         nka_transitions = []
-        epsilon_state_list = self.epsilon_list()
+        epsilon_state_list = self.epsilon_list
         for state in self.enka_states:
             inner_epsilon = list(filter(lambda x: x['state']==state, epsilon_state_list))[0]['epsilon']
             if state['production']['left'] == self.nonterminals[0]:
@@ -76,83 +81,67 @@ class DKA:
                     nka_transitions.append(transition)
         return nka_transitions
     
-
+    def numerate_states(self, dka_transitions):
+        """Numerates the states and add the number,state pair to the state_numeric_dict"""
+       
+        state_numeric_dict = {0:self.dka_start_state}
+        num = 1
+        for transition in dka_transitions:
+            state_delta = transition['delta'][0] if isinstance(transition['delta'][0],list) else [transition['delta'][0]]
+            state_output = transition['state']
+            if state_output not in state_numeric_dict.values():
+                state_numeric_dict[num]=state_output
+                num += 1
+            if state_delta not in state_numeric_dict.values():
+                state_numeric_dict[num]=state_delta
+                num += 1
+            transition['state']=[key for key, value in state_numeric_dict.items() if value == state_output][0]
+            transition['delta'][0]=[key for key, value in state_numeric_dict.items() if value == state_delta][0]
+        return dka_transitions, state_numeric_dict
     
     def nka_to_dka(self):
         nka_transitions = self.enka_to_nka()
-        dka_transitions = list(nka_transitions)
-        dka_states = [[state] for state in self.enka_states]
-        dka_states[0]=(list(filter(lambda x: x['state']==dka_states[0][0], self.epsilon_list()))[0]['epsilon'])
-        for transition in nka_transitions:
-            input_state = transition['state']
-            #print(f"input_states = {input_state}")
-            state_in_check = list(filter(lambda x : x['delta'][0]==input_state, dka_transitions))
-            if len(state_in_check)==0:
+        ##implement bfs = no need for unreachable search, only checking for redundant states later on
+        dka_transitions = []
+
+        visited = [self.dka_start_state]
+        queue = [self.dka_start_state]
+        while queue:
+            input_state = queue.pop(0)
+            #naprvai kaj zelis s njegovim tranzicijama = dodaj u dka_transitions
+            transitions_for_state = list(filter(lambda x: x['delta'][0]==input_state,nka_transitions))
+
+            #ako postoje vec prijelazi za to stanje
+            if len(transitions_for_state)>0:
+                dka_transitions.extend(transitions_for_state)
+                for transition in transitions_for_state:
+                    new_state = transition['state']
+                    if new_state not in visited:
+                        visited.append(new_state)
+                        queue.append(new_state)
+            else:
                 for char in self.input_characters:
                     output = []
                     delta = [input_state,char]
                     for state in input_state:
-                        
+                                
                         transition_state = list(filter(lambda x : x['delta']== [state,char],nka_transitions))
                         if len(transition_state)>0:
                             transition_state = [x['state'] for x in transition_state][0]
-                            #print(f"transition_state: {transition_state}")
+                                    #print(f"transition_state: {transition_state}")
                         output = self.union_list_dict(output,transition_state)
                     if len(output)>0:
                         transition = {'delta':delta,'state':output}
-                        #print(f"Appending transitions= {transition}")
-                        dka_transitions.append(transition)
-                        in_check = self.union_list_dict([transition['state']],[transition['delta'][0]])
-                        dka_states = self.union_list_dict(dka_states,in_check)
-        # for i in dka_transitions:
-        #     print(f"DKA prijelaz = {i}\n")
-        # print(len(dka_transitions))
-        # print(f"\n DKA STATES : {dka_states}")
-        return dka_transitions, dka_states
+                                #print(f"Appending transitions= {transition}")
+                        dka_transitions.append(transition) 
+                        if output not in visited:
+                            visited.append(output)
+                            queue.append(output)
 
-    
-    def dka_minimizacija(self):
-        #ne valja nesto u minimizaciji, krivo izbacujem stanja i produkcije...
-        #HELP :(
-        dka_transitions, dka_states = self.nka_to_dka()
-        state_numeric_dict  = {}
-        num = 0
-        dka_states_temp = list(dka_states)
-        #ne uključujući početno stanje
-        for states in dka_states_temp[1:]:
-            # all transitions which end in states
-            transitions_end = list(filter(lambda x: x['state']==states, dka_transitions))
-            if len(transitions_end)==0 and states in dka_states:
-                dka_states.remove(states)
-        dka_transitions_temp = list(dka_transitions)
-        for transition in dka_transitions_temp:
-            if isinstance(transition['delta'][0],dict):
-                same_char_state = list(filter(lambda x: isinstance(x['delta'][0],list) and transition['delta'][0] in x['delta'][0] and transition['state']==x['state'] and transition['delta'][1]==x['delta'][1],dka_transitions))
-                if len(same_char_state)>0 and transition in dka_transitions:
-                    dka_transitions.remove(transition)
-               
-                if  [transition['delta'][0]] in dka_states:
-                    dka_states.remove([transition['delta'][0]])
+        dka_transitions,state_numeric_dict = self.numerate_states(dka_transitions)
 
-        for i in range(len(dka_states)):
-            state_numeric_dict[i]=dka_states[i]
-        print(f"\n {state_numeric_dict}")
-        for t in dka_transitions:
-            state1 = t['delta'][0]
-            state2 = t['state']
-            if isinstance(state1,dict):
-                state1 = [state1]
-            key_state1 = [key for key, value in state_numeric_dict.items() if value == state1]
-            key_state2 = [key for key, value in state_numeric_dict.items() if value == state2]
-            
-            t['state']= key_state2[0]
-            t['delta'][0]=key_state1[0]
-        
-            
+        for i in dka_transitions:
+           print(f"DKA prijelaz = {i}\n")
         print(state_numeric_dict)
-        #preuredi dka_transitions
-        for t in dka_transitions:
-            print(f"transition : {t}")
-        return state_numeric_dict, dka_transitions
-
-       
+        return dka_transitions, state_numeric_dict
+  
