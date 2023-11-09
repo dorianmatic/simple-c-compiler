@@ -1,9 +1,5 @@
-import sys
 import fileinput
-from pathlib import Path
-import pickle
-from StartSet import *
-from DKA import *
+from lab2.utils.DKA import *
 
 
 class LineTypes:
@@ -87,10 +83,8 @@ if __name__ == "__main__":
 
     nonterminals, productions = add_starting_production(nonterminals, productions)
     ENKA_utils = ENKA(productions, terminals, nonterminals)
-    
 
     enka_transitions,state_with_terminals = ENKA_utils.construct_enka_transitions()
     DKA_utils = DKA(productions, terminals, nonterminals)
     #DKA_utils.enka_to_nka()
     DKA_utils.nka_to_dka()
-    DKA_utils.dka_minimizacija()

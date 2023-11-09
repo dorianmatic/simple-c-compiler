@@ -1,5 +1,4 @@
-from ENKA import *
-from StartSet import *
+from lab2.utils.ENKA import *
 import itertools
 
 class DKA:
@@ -16,15 +15,14 @@ class DKA:
         print(self.enka_states)
     
     def epsilon_surrounding(self, starting_state, states, epsilon):
-        
-        if (not epsilon):
+        if not epsilon:
             return states
         else:
             epsilon = False
             delta = [starting_state,'$']
             test_values = filter(lambda x : x['delta']==delta, self.enka_transitions)
             test_values = list(test_values)
-            if (len(test_values)!=0):
+            if len(test_values)!=0:
                 epsilon = True
                 for state in test_values:
                     state = state['state']
@@ -52,7 +50,6 @@ class DKA:
         return union_list
     
     def enka_to_nka(self):
-
         nka_transitions = []
         epsilon_state_list = self.epsilon_list
         for state in self.enka_states:

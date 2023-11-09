@@ -1,4 +1,4 @@
-from lab2.util.LRParser import LRParser, ActionsEnum
+from lab2.utils.LRParser import LRParser, ActionsEnum
 import unittest
 
 actions = [

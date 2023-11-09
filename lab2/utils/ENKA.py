@@ -1,4 +1,4 @@
-from StartSet import *
+from lab2.utils.StartSet import *
 
 
 class ENKA:
