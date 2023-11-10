@@ -1,6 +1,6 @@
 import fileinput
-from lab2.utils.DKA import *
-from lab2.utils.ENKA import ENKA
+from lab2.utils.DFA import *
+from lab2.utils.ENFA import ENFA
 
 
 class LineTypes:
@@ -86,8 +86,9 @@ if __name__ == "__main__":
             production = create_empty_production()
 
     non_terminals, productions = add_starting_production(non_terminals, productions)
-    enka = ENKA.from_context_free_grammar(productions, terminals, non_terminals)
-    enka.to_nka()
+    enfa = ENFA.from_context_free_grammar(productions, terminals, non_terminals)
+    enfa.to_nka()
 
-    dka = DKA.from_nka(enka)
-    print(*dka.transitions, sep='\n')
+    dfa = DFA.from_nka(enfa)
+    print(*dfa.transitions, sep='\n')
+    print(*dfa.state_numeric_dict.items(), sep='\n')

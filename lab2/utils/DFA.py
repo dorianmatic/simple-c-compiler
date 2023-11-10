@@ -1,13 +1,26 @@
-class DKA:
-    """Izgradi DKA iz ENKA"""
+class DFA:
+    """Deterministic finite state automata for LR parser."""
 
     def __init__(self, transitions, state_numeric_dict):
+        """
+        Initialize DFA from transitions and parser items dictionary.
+
+        :param transitions: DFA transitions list.
+        :param state_numeric_dict:
+        """
         self.transitions = transitions
         self.state_numeric_dict = state_numeric_dict
 
     @classmethod
-    def from_nka(cls, nka):
-        dka_transitions, state_numeric_dict = cls.nka_to_dka(nka)
+    def from_nka(cls, nfa):
+        """
+        Initialize DFA from non-deterministic finite state automata.
+
+        :param nfa:
+        :return: DFA
+        """
+
+        dka_transitions, state_numeric_dict = cls.nfa_to_dfa(nfa)
 
         return cls(dka_transitions, state_numeric_dict)
 
@@ -39,19 +52,23 @@ class DKA:
         return union_list
 
     @classmethod
-    def nka_to_dka(cls, nka):
-        # implement bfs = no need for unreachable search, only checking for redundant states later on
+    def nfa_to_dfa(cls, nfa):
+        """
+        Convert NFA to DFA.
+
+        :param nfa: NFA
+        :return: DFA states and parser items dictionary.
+        """
+
         dka_transitions = []
 
-        dka_start_state = list(filter(lambda x: x['state']==nka.state_with_terminals[0], nka.epsilon_list))[0]['epsilon']
+        dka_start_state = list(filter(lambda x: x['state'] == nfa.state_with_terminals[0], nfa.epsilon_list))[0]['epsilon']
         visited = [dka_start_state]
         queue = [dka_start_state]
         while queue:
             input_state = queue.pop(0)
-            #naprvai kaj zelis s njegovim tranzicijama = dodaj u dka_transitions
-            transitions_for_state = list(filter(lambda x: x['delta'][0]==input_state, nka.transitions))
+            transitions_for_state = list(filter(lambda x: x['delta'][0]==input_state, nfa.transitions))
 
-            #ako postoje vec prijelazi za to stanje
             if len(transitions_for_state)>0:
                 dka_transitions.extend(transitions_for_state)
                 for transition in transitions_for_state:
@@ -60,20 +77,18 @@ class DKA:
                         visited.append(new_state)
                         queue.append(new_state)
             else:
-                for char in nka.terminals + nka.non_terminals:
+                for char in nfa.terminals + nfa.non_terminals:
                     output = []
                     delta = [input_state,char]
                     for state in input_state:
                                 
-                        transition_state = list(filter(lambda x : x['delta']== [state,char], nka.transitions))
+                        transition_state = list(filter(lambda x : x['delta']== [state,char], nfa.transitions))
                         if len(transition_state)>0:
                             transition_state = [x['state'] for x in transition_state][0]
-                                    #print(f"transition_state: {transition_state}")
                         output = cls.union_list_dict(output, transition_state)
                     if len(output)>0:
                         transition = {'delta':delta,'state':output}
-                        #print(f"Appending transitions= {transition}")
-                        dka_transitions.append(transition) 
+                        dka_transitions.append(transition)
                         if output not in visited:
                             visited.append(output)
                             queue.append(output)

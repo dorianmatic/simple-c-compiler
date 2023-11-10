@@ -43,6 +43,10 @@ class LRParser:
         self.stack = deque([0])
         self.sequence = sequence
 
+    @classmethod
+    def from_dsa(cls, dsa):
+        pass
+
     def init_stack(self):
         """
         Initialize the stack by setting the first (and only value) to zero.

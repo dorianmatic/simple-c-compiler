@@ -1,20 +1,28 @@
 from lab2.utils.StartSet import *
 
 
-class ENKA:
-    """Na temelju produkcija gramatike, nezavrsnih i zavrsnih znakova se gradi ENKA"""
+class ENFA:
+    """Non-deterministic finite state automata with (or without) epsilon-transitions."""
 
     def __init__(self, transitions, states, state_with_terminals, terminals, non_terminals):
-        self.transitions = transitions # OK
-        self.states = states # OK
+        self.transitions = transitions
+        self.states = states
         self.state_with_terminals = state_with_terminals
         self.terminals = terminals
         self.non_terminals = non_terminals
-        self.epsilon_list = self.get_epsilon_list() # OK
-        # print(*transitions, sep='\n')
+        self.epsilon_list = self.get_epsilon_list()
 
     @classmethod
     def from_context_free_grammar(cls, productions, terminals, non_terminals):
+        """
+        Build ENFA from context-free grammar.
+
+        :param productions: Grammar productions.
+        :param terminals: Grammar terminal symbols.
+        :param non_terminals: Grammar non-terminal symbols
+        :return: ENFA
+        """
+
         states = cls.get_states(productions)
         start_utils = Zapocinje(productions, terminals, non_terminals)
         transitions, state_with_terminals = cls.construct_enka_transitions(states, start_utils)
@@ -153,11 +161,9 @@ class ENKA:
         return epsilon_dict
 
     def to_nka(self):
+        """Convert ENFA to NFA by removing epsilon-transitions."""
+
         nka_transitions = []
-        # print(*self.epsilon_list, '\n')
-        # print(*self.state_with_terminals, sep='\n')
-        # print(self.non_terminals + self.terminals)
-        # print(*self.transitions, sep='\n')
         for state in self.state_with_terminals:
             inner_epsilon = list(filter(lambda x: x['state'] == state, self.epsilon_list))[0]['epsilon']
             if state['production']['left'] == self.non_terminals[0]:
