@@ -1,6 +1,10 @@
 import fileinput
+import pickle
+from pathlib import Path
+
 from lab2.utils.DFA import *
 from lab2.utils.ENFA import ENFA
+from lab2.utils.LRParser import LRParser
 
 
 class LineTypes:
@@ -49,6 +53,16 @@ def create_empty_production():
     return {"left": "", "right": []}
 
 
+def prepare_pickle(terminals, non_terminals, syncs, parser):
+    return {
+        'non_terminals': non_terminals,
+        'sync_non_terminals': syncs,
+        'terminals': terminals,
+        'parser_actions': parser.actions,
+        'parser_new_states': parser.new_states
+    }
+
+
 def add_starting_production(nonterminals, productions):
     """Adding an artificial starting nonterminal and starting production per instructions on pg. 31"""
     starting_nonterminal = "<S0>"
@@ -71,7 +85,6 @@ if __name__ == "__main__":
         line_type = identify_line(line)
 
         if line_type == LineTypes.NONTERMINAL:
-            # podrazumijeva se da je nonterminals[0]==pocetni nezavrsni znak
             non_terminals = process_symbols(line)
         elif line_type == LineTypes.TERMINAL:
             terminals = process_symbols(line)
@@ -90,5 +103,8 @@ if __name__ == "__main__":
     enfa.to_nka()
 
     dfa = DFA.from_nka(enfa)
-    print(*dfa.transitions, sep='\n')
-    print(*dfa.state_numeric_dict.items(), sep='\n')
+    parser = LRParser.from_dfa(dfa)
+
+    pickle.dump(prepare_pickle(terminals, non_terminals, sync_non_terminals, parser),
+                Path(__file__).parent.joinpath('analizator', 'SA_data.pkl').open('wb'))
+
