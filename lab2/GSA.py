@@ -1,5 +1,6 @@
 import fileinput
 from lab2.utils.DKA import *
+from lab2.utils.ENKA import ENKA
 
 
 class LineTypes:
@@ -59,6 +60,10 @@ def add_starting_production(nonterminals, productions):
 
 if __name__ == "__main__":
     productions = []
+    non_terminals = []
+    terminals = []
+    sync_non_terminals = []
+
     left = ""
     production = create_empty_production()
     production_processing = False
@@ -67,12 +72,11 @@ if __name__ == "__main__":
 
         if line_type == LineTypes.NONTERMINAL:
             # podrazumijeva se da je nonterminals[0]==pocetni nezavrsni znak
-            nonterminals = process_symbols(line)
+            non_terminals = process_symbols(line)
         elif line_type == LineTypes.TERMINAL:
             terminals = process_symbols(line)
         elif line_type == LineTypes.SYN:
-            sync_nonterminals = process_symbols(line)
-            pass
+            sync_non_terminals = process_symbols(line)
         elif line_type == LineTypes.PRODUCTION:
             production, left, newLeftSymbol = process_production_line(
                 production, line, left
@@ -81,10 +85,9 @@ if __name__ == "__main__":
                 productions.append(production)
             production = create_empty_production()
 
-    nonterminals, productions = add_starting_production(nonterminals, productions)
-    ENKA_utils = ENKA(productions, terminals, nonterminals)
+    non_terminals, productions = add_starting_production(non_terminals, productions)
+    enka = ENKA.from_context_free_grammar(productions, terminals, non_terminals)
+    enka.to_nka()
 
-    enka_transitions,state_with_terminals = ENKA_utils.construct_enka_transitions()
-    DKA_utils = DKA(productions, terminals, nonterminals)
-    #DKA_utils.enka_to_nka()
-    DKA_utils.nka_to_dka()
+    dka = DKA.from_nka(enka)
+    print(*dka.transitions, sep='\n')

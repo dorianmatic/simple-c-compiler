@@ -4,10 +4,14 @@ from lab2.utils.StartSet import *
 class ENKA:
     """Na temelju produkcija gramatike, nezavrsnih i zavrsnih znakova se gradi ENKA"""
 
-    def __init__(self, transitions, states, state_with_terminals):
-        self.transitions = transitions
-        self.states = states
+    def __init__(self, transitions, states, state_with_terminals, terminals, non_terminals):
+        self.transitions = transitions # OK
+        self.states = states # OK
         self.state_with_terminals = state_with_terminals
+        self.terminals = terminals
+        self.non_terminals = non_terminals
+        self.epsilon_list = self.get_epsilon_list() # OK
+        # print(*transitions, sep='\n')
 
     @classmethod
     def from_context_free_grammar(cls, productions, terminals, non_terminals):
@@ -15,7 +19,7 @@ class ENKA:
         start_utils = Zapocinje(productions, terminals, non_terminals)
         transitions, state_with_terminals = cls.construct_enka_transitions(states, start_utils)
 
-        return cls(transitions, states, state_with_terminals)
+        return cls(transitions, states, state_with_terminals, terminals, non_terminals)
 
     @classmethod
     def get_states(cls, productions):
@@ -110,3 +114,76 @@ class ENKA:
                     )
 
         return transitions, state_with_terminals
+
+
+    # ova union funkcija je upitna dosta
+    @staticmethod
+    def union_list_dict(list1, list2):
+        union_list = list(list1)
+        for el in list2:
+            if el not in union_list:
+                union_list.append(el)
+        return union_list
+
+    def epsilon_surrounding(self, starting_state, states, epsilon):
+        if not epsilon:
+            return states
+        else:
+            epsilon = False
+            delta = [starting_state, '$']
+            test_values = filter(lambda x: x['delta'] == delta, self.transitions)
+            test_values = list(test_values)
+            if len(test_values) != 0:
+                epsilon = True
+                for state in test_values:
+                    state = state['state']
+                    if state not in states:
+                        states.append(state)
+                        states = self.epsilon_surrounding(starting_state=state, states=states, epsilon=epsilon)
+                return states
+
+            return self.epsilon_surrounding(starting_state=test_values, states=states, epsilon=epsilon)
+
+    def get_epsilon_list(self):
+        epsilon_dict = []
+        for state in self.state_with_terminals:
+            epsilon = self.epsilon_surrounding(states=[state], starting_state=state, epsilon=True)
+            dict_pair = {'state': state, 'epsilon': epsilon}
+            epsilon_dict.append(dict_pair)
+        return epsilon_dict
+
+    def to_nka(self):
+        nka_transitions = []
+        # print(*self.epsilon_list, '\n')
+        # print(*self.state_with_terminals, sep='\n')
+        # print(self.non_terminals + self.terminals)
+        # print(*self.transitions, sep='\n')
+        for state in self.state_with_terminals:
+            inner_epsilon = list(filter(lambda x: x['state'] == state, self.epsilon_list))[0]['epsilon']
+            if state['production']['left'] == self.non_terminals[0]:
+                state = inner_epsilon
+            for char in self.terminals + self.non_terminals:
+                delta = [state, char]
+
+                inner_states = []
+                for inner_state in inner_epsilon:
+                    transition_list = filter(lambda x: x['delta'][0] == inner_state and x['delta'][1] == char,
+                                             self.transitions)
+                    transition_list = list(transition_list)
+
+                    if len(transition_list) > 0:
+                        for transition in transition_list:
+                            in_s = transition['state']  # podrazumijevam da nece za isto stanje i znak otici u vise moguca stanja (to je mozda greska)
+
+                            if in_s not in inner_states:
+                                inner_states.append(in_s)
+
+                output_states = []
+                if len(inner_states) > 0:
+                    for in_s in inner_states:
+                        output_states = self.union_list_dict(output_states, list(
+                            filter(lambda x: x['state'] == in_s, self.epsilon_list))[0]['epsilon'])
+                    transition = {'delta': delta, 'state': output_states}
+                    nka_transitions.append(transition)
+
+        self.transitions = nka_transitions
