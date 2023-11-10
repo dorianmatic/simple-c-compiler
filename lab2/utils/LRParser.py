@@ -43,7 +43,7 @@ class LRParser:
         self.actions = actions
         self.new_states = new_states
         self.stack = deque([0])
-        self.sequence = sequence
+        self.sequence = self.build_sequence(sequence)
 
     @classmethod
     def from_dfa(cls, dfa):
@@ -129,17 +129,17 @@ class LRParser:
             seq_element = self.sequence[0]
             current_state = self.stack[-1]
 
-            action = self.actions[current_state].get(seq_element, None)
+            action = self.actions[current_state].get(seq_element[0], None)
             if action is None:
                 return False
             elif action['type'] == ActionsEnum.MOVE:
-                self.stack.append(seq_element)
-                self.stack.append(Node([seq_element]))
+                self.stack.append(seq_element[0])
+                self.stack.append(Node([' '.join(seq_element).strip()]))
                 self.stack.append(action['new_state'])
                 self.sequence = self.sequence[1:]
             elif action['type'] == ActionsEnum.REDUCE:
                 popped = [self.stack.pop() for _ in range(3*len(action['right']))]
-                nodes = filter(lambda x: type(x) == Node, popped)
+                nodes = reversed(list(filter(lambda x: type(x) == Node, popped)))
 
                 current_state = self.stack[-1]
                 self.stack.append(action['left'])
@@ -154,10 +154,20 @@ class LRParser:
         Returns the unparsed part of the input sequence.
         """
 
-        return self.sequence
+        return list(map(lambda x: ' '.join(x), self.sequence))
 
-    def set_sequence(self, sequence):
-        self.sequence = sequence
+    @staticmethod
+    def build_sequence(raw_sequence):
+        """
+        Split each sequence element into two - element proper and element label. Perform the split on first whitespace.
+
+        :param raw_sequence: list[string]
+        :return: list[list]
+        """
+        return list(map(lambda x: x.split(' ', 1), raw_sequence))
+
+    def set_sequence(self, raw_sequence):
+        self.sequence = self.build_sequence(raw_sequence)
 
     def get_tree(self):
         """
