@@ -80,6 +80,7 @@ class LRParser:
         :param dfa: DFA
         :return: list[dict]
         """
+
         actions = [{} for _ in range(len(dfa.state_numeric_dict))]
         for state, parser_items in dfa.state_numeric_dict.items():
             for parser_item in parser_items:

@@ -7,8 +7,7 @@ class Zapocinje:
         self.productions = productions
         self.terminals = terminals
         self.non_terminals = non_terminals
-        self.empty_nonterminals = self.find_empty_nonterminals(self.productions, [])
-
+        self.empty_non_terminals = self.find_empty_non_terminals(productions)
         self.matrix = self.initialize_matrix()
         self.mark_starts_directly_matrix()
         self.mark_transitive_matrix()
@@ -67,37 +66,24 @@ class Zapocinje:
 
         return possible_first_symbols
 
-    def find_empty_nonterminals(self, productions, empty_nonterminals):
-        """Returns a list of empty nonterminals"""
-        empty_right = ["$"]
-        added = False
-        for production in productions:
-            if production["right"] == empty_right:
-                empty_nonterminals.append(production["left"])
-                added = True
-            else:
-                empty = True
-                for nt in production["right"]:
-                    if nt not in empty_nonterminals:
-                        empty = False
-                if empty:
-                    empty_nonterminals.append(production["left"])
-                    added = True
-        if added:
-            filter_productions = [
-                production
-                for production in self.productions
-                if production["left"] not in empty_nonterminals
-            ]
-            return self.find_empty_nonterminals(filter_productions, empty_nonterminals)
-        return empty_nonterminals
+    def find_empty_non_terminals(self, productions):
+        empty_non_terminals = set(map(lambda x: x['left'], filter(lambda x: x['right'] == [], productions)))
 
-    def generate_empty(self, characters):
+        expanded = True
+        while expanded:
+            expanded = False
+            for production in productions:
+                if set(production['right']).difference(empty_non_terminals) == {} and production['left'] not in empty_non_terminals:
+                    empty_non_terminals.update(production['left'])
+                    expanded = True
+
+        return empty_non_terminals
+
+
+    def generate_empty(self, sequence):
         """Returns True if it is possible to generate an empty char from the characters else False"""
-        for char in characters:
-            if char not in self.empty_nonterminals:
-                return False
-        return True
+
+        return all(map(lambda x: x in self.empty_non_terminals, sequence))
 
     def starts_set_for_non_terminal(self, non_terminal):
         """
@@ -108,7 +94,7 @@ class Zapocinje:
         """
 
         return map(lambda x: x[0],
-                    filter(lambda x: x[0] in self.terminals and x[1] == 1,self.matrix[non_terminal].items()))
+                    filter(lambda x: x[0] in self.terminals and x[1] == 1, self.matrix[non_terminal].items()))
 
     def starts_set_for_sequence(self, sequence):
         """
@@ -124,7 +110,7 @@ class Zapocinje:
                 if is_non_terminal(symbol):
                     starting_terminals.update(self.starts_set_for_non_terminal(symbol))
 
-                    if symbol not in self.empty_nonterminals:
+                    if symbol not in self.empty_non_terminals:
                         break
                 else:
                     starting_terminals.add(symbol)

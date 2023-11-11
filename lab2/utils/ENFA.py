@@ -47,19 +47,7 @@ class ENFA:
         return states
 
     @classmethod
-    def find_terminals(cls, parser_read_point, right_current_state, current_state, start_utils):
-        if parser_read_point + 2 < len(right_current_state):
-            starting_symbols = right_current_state[parser_read_point + 2 :]
-            terminals = start_utils.starts_set_for_sequence(starting_symbols)
-            if start_utils.generate_empty(starting_symbols):
-                terminals = terminals + list(current_state["terminals"])
-        else:
-            terminals = current_state["terminals"]
-
-        return terminals
-
-    @classmethod
-    def find_terminals2(cls, beta, current_state, start_utils):
+    def find_terminals(cls, beta, current_state, start_utils):
         if beta:
             terminals = start_utils.starts_set_for_sequence(beta)
             if start_utils.generate_empty(beta):
@@ -123,7 +111,7 @@ class ENFA:
                 ]
                 for state in epsilon_transition_states:
                     delta = [current_state, "$"]
-                    terminals = cls.find_terminals(parser_read_point, right_current_state, current_state, start_utils)
+                    terminals = cls.find_terminals(right_current_state[parser_read_point+2:], current_state, start_utils)
                     transition = {
                         "delta": delta,
                         "state": {"production": state, "terminals": terminals},
