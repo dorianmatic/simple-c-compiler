@@ -103,7 +103,8 @@ if __name__ == "__main__":
     enfa.to_nka()
 
     dfa = DFA.from_nka(enfa)
-    parser = LRParser.from_dfa(dfa)
+    # print(*productions, sep='\n')
+    parser = LRParser.from_dfa(dfa, productions)
 
     pickle.dump(prepare_pickle(terminals, non_terminals, sync_non_terminals, parser),
                 Path(__file__).parent.joinpath('analizator', 'SA_data.pkl').open('wb'))

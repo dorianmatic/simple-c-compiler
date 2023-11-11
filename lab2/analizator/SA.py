@@ -15,9 +15,10 @@ class SyntaxAnalyzer:
         while not self.parser.parse():
             # parser failed - perform error recovery
             sequence = self.parser.get_sequence()
-            for seq_element, i in enumerate(sequence):
-                if seq_element[0] in self.sync_terminals:
+            for i, seq_element in enumerate(sequence):
+                if seq_element.split(' ', 1)[0] in self.sync_terminals:
                     sequence = sequence[i:]
+                    break
 
             self.parser.set_sequence(sequence)
 
