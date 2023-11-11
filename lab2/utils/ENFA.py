@@ -49,9 +49,20 @@ class ENFA:
     @classmethod
     def find_terminals(cls, parser_read_point, right_current_state, current_state, start_utils):
         if parser_read_point + 2 < len(right_current_state):
-            zapocni_characters = right_current_state[parser_read_point + 2 :]
-            terminals = start_utils.start_union(zapocni_characters)
-            if start_utils.generate_empty(zapocni_characters):
+            starting_symbols = right_current_state[parser_read_point + 2 :]
+            terminals = start_utils.starts_set_for_sequence(starting_symbols)
+            if start_utils.generate_empty(starting_symbols):
+                terminals = terminals + list(current_state["terminals"])
+        else:
+            terminals = current_state["terminals"]
+
+        return terminals
+
+    @classmethod
+    def find_terminals2(cls, beta, current_state, start_utils):
+        if beta:
+            terminals = start_utils.starts_set_for_sequence(beta)
+            if start_utils.generate_empty(beta):
                 terminals = terminals + list(current_state["terminals"])
         else:
             terminals = current_state["terminals"]

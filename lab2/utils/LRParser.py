@@ -1,13 +1,11 @@
 from collections import deque
-
+from lab2.utils.helpers import *
 
 class ActionsEnum:
     MOVE = 'move'
     REDUCE = 'reduce'
     ACCEPT = 'accept'
 
-def is_non_terminal(symbol):
-    return symbol.startswith('<') and symbol.endswith('>')
 
 class Node:
     """Syntax Tree Node"""
@@ -85,6 +83,7 @@ class LRParser:
         actions = [{} for _ in range(len(dfa.state_numeric_dict))]
         for state, parser_items in dfa.state_numeric_dict.items():
             for parser_item in parser_items:
+                print(state, parser_item)
                 if parser_item['production']['right'][-1] == 0:
                     if parser_item['terminals'] == '!' and parser_item['production']['left'] == '<S0>':
                         actions[state]['!'] = {'type': ActionsEnum.ACCEPT }
@@ -120,6 +119,7 @@ class LRParser:
         :param productions: Original grammar productions
         :return: dict
         """
+
         if action_1 is None: return action_2
         if action_2 is None: return action_1
         if action_1['type'] == ActionsEnum.MOVE: return action_1
@@ -146,7 +146,6 @@ class LRParser:
         Returns:
             True if the string is successfully parsed, False otherwise
         """
-
         if self.sequence[-1] != ['!']:
             self.sequence.append(['!'])
         
@@ -156,7 +155,7 @@ class LRParser:
 
             action = self.actions[current_state].get(seq_element[0], None)
             if action is None:
-                for _ in range(3): self.stack.pop()
+                # for _ in range(3): self.stack.pop()
                 return False
             elif action['type'] == ActionsEnum.MOVE:
                 self.stack.append(seq_element[0])

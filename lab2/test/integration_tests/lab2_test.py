@@ -16,7 +16,7 @@ class bcolors:
 
 
 def test_case_directories(top_level_path):
-    for path in top_level_path.iterdir():
+    for path in sorted(top_level_path.iterdir()):
         if path.is_dir():
             yield path
 

@@ -1,21 +1,71 @@
+from lab2.utils.helpers import *
+
 class Zapocinje:
     """Contains all methods needed to calculate the Zapocinje set of characters"""
 
-    def __init__(self, productions, terminals, nonterminals):
+    def __init__(self, productions, terminals, non_terminals):
         self.productions = productions
         self.terminals = terminals
-        self.nonterminals = nonterminals
+        self.non_terminals = non_terminals
         self.empty_nonterminals = self.find_empty_nonterminals(self.productions, [])
-        self.matrix = self.starts_with_matrix(self.starts_with_instant_matrix())
 
-    def initialize_matrix(self, shape):
-        matrix = []
-        for i in range(shape):
-            row = [0] * shape
-            matrix.append(row)
-        for i in range(shape):
-            matrix[i][i] = -1
-        return matrix
+        self.matrix = self.initialize_matrix()
+        self.mark_starts_directly_matrix()
+        self.mark_transitive_matrix()
+
+    def mark_starts_directly_matrix(self):
+        """
+        Apply starts_directly_with for every non-terminal.
+
+        :param matrix:
+        :return:
+        """
+        for non_terminal in self.non_terminals:
+            possible_first_symbols = self.starts_directly_with(non_terminal, self.productions)
+            for symbol in possible_first_symbols:
+                self.matrix[non_terminal][symbol] = 1
+
+    def mark_transitive_matrix(self):
+        """
+        If matrix[j][k] is marked and matrix[k][l] is marked, matrix[j][l] must be marked.
+
+        :return:
+        """
+
+        for j in self.non_terminals:
+            for k in self.non_terminals:
+                for l in self.non_terminals:
+                    if self.matrix[j].get(k) == 1 and self.matrix[k].get(l) == 1:
+                        self.matrix[j][l] = 1
+
+    def initialize_matrix(self):
+        """
+        Initialize the matrix and set '*' on diagonals.
+        :return:
+        """
+
+        return dict([(symbol, { symbol: 1 }) for symbol in self.non_terminals + self.terminals])
+
+    def starts_directly_with(self, non_terminal, productions):
+        """
+        Returns any possible symbol a sequence generate from non_terminal can start with.
+
+        :param non_terminal:
+        :param productions:
+        :return:
+        """
+
+        possible_first_symbols = []
+        queue = list(filter(lambda x: x['left'] == non_terminal, productions))
+        while queue:
+            production = queue[0]
+            if is_non_terminal(production['right'][0]):
+                queue.extend(list(filter(lambda x: x['left'] == production['right'][0], productions)))
+
+            possible_first_symbols.append(production['right'][0])
+            queue = queue[1:]
+
+        return possible_first_symbols
 
     def find_empty_nonterminals(self, productions, empty_nonterminals):
         """Returns a list of empty nonterminals"""
@@ -30,10 +80,10 @@ class Zapocinje:
                 for nt in production["right"]:
                     if nt not in empty_nonterminals:
                         empty = False
-                if empty == True:
+                if empty:
                     empty_nonterminals.append(production["left"])
                     added = True
-        if added == True:
+        if added:
             filter_productions = [
                 production
                 for production in self.productions
@@ -49,51 +99,35 @@ class Zapocinje:
                 return False
         return True
 
-    def starts_with_instant_matrix(self):
-        row = self.nonterminals + self.terminals
-        matrix = self.initialize_matrix(len(row))
-        for production in self.productions:
-            left = production["left"]
-            right = production["right"]
-            index_row = row.index(left)
-            if right[0] != "$":
-                for sign in right:
-                    index_col = row.index(sign)
-                    matrix[index_row][index_col] = 1
-                    if sign not in self.empty_nonterminals:
-                        break
+    def starts_set_for_non_terminal(self, non_terminal):
+        """
+        Returns the STARTS set for a given non-terminal.
 
-        return matrix
+        :param non_terminal:
+        :return:
+        """
 
-    def starts_with_matrix(self, matrix):
-        for i in range(len(matrix)):
-            for j in range(len(matrix)):
-                if matrix[i][j] == 1:
-                    for k in range(len(matrix)):
-                        if matrix[j][k]:
-                            matrix[i][k] = -1
+        return map(lambda x: x[0],
+                    filter(lambda x: x[0] in self.terminals and x[1] == 1,self.matrix[non_terminal].items()))
 
-        return matrix
+    def starts_set_for_sequence(self, sequence):
+        """
+        Returns the STARTS set for a given sequence.
 
-    def starts_with(self, character):
-        start = []
-        index_row = self.nonterminals.index(character)
-        char_row = self.matrix[index_row]
-        for i in range(len(self.nonterminals), len(char_row)):
-            if char_row[i] == 1 or char_row[i] == -1:
-                start.append(self.terminals[i - len(self.nonterminals)])
-        return start
+        :param sequence:
+        :return:
+        """
 
-    def start_union(self, characters):
         starting_terminals = set()
-        if characters[0] != "$":
-            for char in characters:
-                if not char.startswith("<"):
-                    starting_terminals.add(char)
-                    break
-                else:
-                    starting_terminals.update(self.starts_with(char))
-                    if char not in self.empty_nonterminals:
+        if sequence[0] != "$":
+            for symbol in sequence:
+                if is_non_terminal(symbol):
+                    starting_terminals.update(self.starts_set_for_non_terminal(symbol))
+
+                    if symbol not in self.empty_nonterminals:
                         break
+                else:
+                    starting_terminals.add(symbol)
+                    break
 
         return list(starting_terminals)
