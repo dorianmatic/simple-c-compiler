@@ -1,5 +1,6 @@
 import argparse
 import subprocess
+from subprocess import TimeoutExpired
 import time
 from pathlib import Path
 
@@ -32,10 +33,16 @@ def print_process_result(result, time_elapsed):
 
 def run(script, input_path):
     start_time = time.time()
-    result = subprocess.run(['python', script], text=True, capture_output=True, stdin=input_path.open())
-    print_process_result(result, time.time() - start_time)
+    try:
+        result = subprocess.run(['python', script], text=True, capture_output=True,
+                                stdin=input_path.open(), timeout=5)
+        print_process_result(result, time.time() - start_time)
 
-    return result
+        return result
+    except TimeoutExpired:
+        print(f"{bcolors.FAIL} TIMEOUT {bcolors.ENDC}")
+
+        return None
 
 
 parser = argparse.ArgumentParser()
@@ -63,10 +70,13 @@ for test_case_path in test_case_directories(examples_path):
 
     print(f"Running generator... ", end='')
     generator_result = run(generator_script, syntax_definition_path)
+    if generator_result is None:
+        continue
 
     print(f"Running analyzer... ", end='')
     syntax_analyzer_result = run(syntax_analyzer_script, sa_input_path)
-    print(generator_result.stdout)
+    if syntax_analyzer_result is None:
+        continue
 
     expected = ''.join(sa_output_path.open().readlines())
     if expected == syntax_analyzer_result.stdout:

@@ -84,7 +84,7 @@ class LRParser:
         actions = [{} for _ in range(len(dfa.state_numeric_dict))]
         for state, parser_items in dfa.state_numeric_dict.items():
             for parser_item in parser_items:
-                print(state, parser_item)
+                # print(state, parser_item)
                 if parser_item['production']['right'][-1] == 0:
                     if parser_item['terminals'] == '!' and parser_item['production']['left'] == '<S0>':
                         actions[state]['!'] = {'type': ActionsEnum.ACCEPT }
@@ -156,7 +156,6 @@ class LRParser:
 
             action = self.actions[current_state].get(seq_element[0], None)
             if action is None:
-                # for _ in range(3): self.stack.pop()
                 return False
             elif action['type'] == ActionsEnum.MOVE:
                 self.stack.append(seq_element[0])
@@ -167,7 +166,7 @@ class LRParser:
                 if len(action['right']) == 0:
                     nodes = [Node(['$'])]
                 else:
-                    popped = [self.stack.pop() for _ in range(3*len(action['right']))]
+                    popped = self.pop_stack(len(action['right']))
                     nodes = reversed(list(filter(lambda x: type(x) == Node, popped)))
 
                 current_state = self.stack[-1]
@@ -204,3 +203,6 @@ class LRParser:
         """
 
         return '\n'.join(self.stack[-2].values)
+
+    def pop_stack(self, n):
+        return [self.stack.pop() for _ in range(3*n)]
