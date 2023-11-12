@@ -8,45 +8,9 @@ class Zapocinje:
         self.terminals = terminals
         self.non_terminals = non_terminals
         self.empty_nonterminals = self.find_empty_nonterminals(self.productions, [])
-    
-        self.matrix = self.initialize_matrix()
-        self.mark_starts_directly_matrix()
-        self.mark_transitive_matrix()
+        self.starts_with_dict = {}
 
-    def mark_starts_directly_matrix(self):
-        """
-        Apply starts_directly_with for every non-terminal.
-
-        :param matrix:
-        :return:
-        """
-        for non_terminal in self.non_terminals:
-            possible_first_symbols = self.starts_directly_with(non_terminal, self.productions)
-            for symbol in possible_first_symbols:
-                self.matrix[non_terminal][symbol] = 1
-
-    def mark_transitive_matrix(self):
-        """
-        If matrix[j][k] is marked and matrix[k][l] is marked, matrix[j][l] must be marked.
-
-        :return:
-        """
-        #ovdje je greška
-        for j in (self.non_terminals+self.terminals):
-            for k in (self.non_terminals+self.terminals):
-                for l in (self.non_terminals+self.terminals):
-                    if self.matrix[j].get(k) == 1 and self.matrix[k].get(l) == 1:
-                        self.matrix[j][l] = 1
-
-    def initialize_matrix(self):
-        """
-        Initialize the matrix and set '*' on diagonals.
-        :return:
-        """
-
-        return dict([(symbol, { symbol: 1 }) for symbol in self.non_terminals + self.terminals])
-
-    def starts_directly_with(self, non_terminal, productions):
+    def starts_with(self, non_terminal):
         """
         Returns any possible symbol a sequence generate from non_terminal can start with.
 
@@ -56,13 +20,21 @@ class Zapocinje:
         """
 
         possible_first_symbols = []
-        queue = list(filter(lambda x: x['left'] == non_terminal, productions))
+        queue = list(filter(lambda x: x['left'] == non_terminal, self.productions))
+        visited = list(queue)
         while queue:
             production = queue.pop(0)
             for c in production['right']:
-                possible_first_symbols.append(c)
-                if c not in self.empty_nonterminals:
+                if c not in possible_first_symbols:
+                    possible_first_symbols.append(c)
+                    new_list = list(filter(lambda x:x['left']==c,self.productions))
+                    new_queue_el = [x for x in new_list if x not in visited]
+                    queue.extend(new_queue_el)
+                    visited.extend(new_queue_el)
+                if c not in self.empty_nonterminals or c in self.terminals:
                     break
+        possible_first_symbols = [x for x in possible_first_symbols if x in self.terminals]
+        self.starts_with_dict[non_terminal]=possible_first_symbols
         return possible_first_symbols
 
     def find_empty_nonterminals(self, productions, empty_nonterminals):
@@ -97,17 +69,6 @@ class Zapocinje:
                 return False
         return True
 
-    def starts_set_for_non_terminal(self, non_terminal):
-        """
-        Returns the STARTS set for a given non-terminal.
-
-        :param non_terminal:
-        :return:
-        """
-        #Kaj nije bila spika da je map za visu verziju Pythona nego kaj smijemo koristiti
-        return map(lambda x: x[0],
-                    filter(lambda x: x[0] in self.terminals and x[1] == 1,self.matrix[non_terminal].items()))
-
     def starts_set_for_sequence(self, sequence):
         """
         Returns the STARTS set for a given sequence.
@@ -120,8 +81,8 @@ class Zapocinje:
         if sequence[0] != "$":
             for symbol in sequence:
                 if is_non_terminal(symbol):
-                    starting_terminals.update(self.starts_set_for_non_terminal(symbol))
-
+                    update = self.starts_with_dict.get(symbol, self.starts_with(symbol))
+                    starting_terminals.update(update)
                     if symbol not in self.empty_nonterminals:
                         break
                 else:
