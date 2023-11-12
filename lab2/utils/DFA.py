@@ -62,7 +62,7 @@ class DFA:
 
         dka_transitions = []
 
-        dka_start_state = list(filter(lambda x: x['state'] == nfa.state_with_terminals[0], nfa.epsilon_list))[0]['epsilon']
+        dka_start_state = list(filter(lambda x: x['state'] == nfa.state_with_terminals[0], nfa.epsilon_closures))[0]['epsilon']
         visited = [dka_start_state]
         queue = [dka_start_state]
         while queue:

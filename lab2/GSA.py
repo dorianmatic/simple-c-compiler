@@ -1,5 +1,6 @@
 import fileinput
 import pickle
+import time
 from pathlib import Path
 
 from lab2.utils.DFA import *
@@ -99,12 +100,23 @@ if __name__ == "__main__":
             production = create_empty_production()
 
     non_terminals, productions = add_starting_production(non_terminals, productions)
-    enfa = ENFA.from_context_free_grammar(productions, terminals, non_terminals)
-    enfa.to_nka()
+    print('Loaded.')
 
+    t = time.time()
+    enfa = ENFA.from_context_free_grammar(productions, terminals, non_terminals)
+    print(f"ENFA.from_context_free_grammar -> {time.time() - t}")
+
+    t = time.time()
+    enfa.to_nka()
+    print(f"enka.to_nka -> {time.time() - t}")
+
+    t = time.time()
     dfa = DFA.from_nka(enfa)
-    # print(*productions, sep='\n')
+    print(f"DFA.from_nka -> {time.time() - t}")
+
+    t = time.time()
     parser = LRParser.from_dfa(dfa, productions)
+    print(f"LRParser.from_dfa -> {time.time() - t}")
 
     pickle.dump(prepare_pickle(terminals, non_terminals, sync_non_terminals, parser),
                 Path(__file__).parent.joinpath('analizator', 'SA_data.pkl').open('wb'))
