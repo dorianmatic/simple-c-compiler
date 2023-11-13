@@ -65,7 +65,7 @@ class LRParser:
         :param dfa: DFA
         :return: list[dict]
         """
-        new_states = [{} for _ in range(len(dfa.state_numeric_dict))]
+        new_states = [{} for _ in range(len(dfa.state_productions))]
         for transition in dfa.transitions:
             if is_non_terminal(transition['delta'][1]):
                 new_states[transition['delta'][0]][transition['delta'][1]] = transition['state']
@@ -81,8 +81,8 @@ class LRParser:
         :return: list[dict]
         """
 
-        actions = [{} for _ in range(len(dfa.state_numeric_dict))]
-        for state, parser_items in dfa.state_numeric_dict.items():
+        actions = [{} for _ in range(len(dfa.state_productions))]
+        for state, parser_items in enumerate(dfa.state_productions):
             for parser_item in parser_items:
                 # print(state, parser_item)
                 if parser_item['production']['right'][-1] == 0:

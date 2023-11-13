@@ -1,22 +1,21 @@
 import time
-
+from functools import cache
 from lab2.utils.StartSet import *
 
 
 class ENFA:
     """Non-deterministic finite state automata with (or without) epsilon-transitions."""
 
-    def __init__(self, transitions, state_with_terminals, state_enumeration, terminals, non_terminals):
+    def __init__(self, transitions, state_enumeration, terminals, non_terminals):
         self.transitions = transitions
         self.state_enumeration = state_enumeration
 
-        self.state_with_terminals = state_with_terminals
         self.terminals = terminals
         self.non_terminals = non_terminals
 
-        t = time.time()
+        # t = time.time()
         self.epsilon_closures = self.get_epsilon_closures()
-        print(f" get_epsilon_list -> {time.time() - t}")
+        # print(f" get_epsilon_list -> {time.time() - t}")
 
     @classmethod
     def from_context_free_grammar(cls, productions, terminals, non_terminals):
@@ -28,19 +27,16 @@ class ENFA:
         :param non_terminals: Grammar non-terminal symbols
         :return: ENFA
         """
-        t = time.time()
         states = cls.get_states(productions)
-        print(f" get_states -> {time.time()-t}")
-
-        t = time.time()
+        # t = time.time()
         start_utils = Zapocinje(productions, terminals, non_terminals)
-        print(f" Zapocinje -> {time.time() - t}")
+        # print(f" Zapocinje -> {time.time() - t}")
 
-        t = time.time()
-        transitions, state_with_terminals, state_enumeration = cls.construct_enka_transitions(states, start_utils)
-        print(f" construct_enka_transitions -> {time.time() - t}")
+        # t = time.time()
+        transitions, state_enumeration = cls.construct_enka_transitions(states, start_utils)
+        # print(f" construct_enka_transitions -> {time.time() - t}")
 
-        return cls(transitions, state_with_terminals, state_enumeration, terminals, non_terminals)
+        return cls(transitions, state_enumeration, terminals, non_terminals)
 
     @classmethod
     def get_states(cls, productions):
@@ -71,31 +67,25 @@ class ENFA:
         return terminals
 
     @classmethod
-    def bfs_check(cls, visited, queue, transitions, transition, new_state, state_with_terminals):
-        if new_state not in state_with_terminals:
-            state_with_terminals.append(new_state)
+    def bfs_check(cls, visited, queue, transitions, transition, new_state):
         if new_state not in visited:
             visited.append(new_state)
             queue.append(new_state)
         transitions.append(transition)
 
-        return transitions, queue, visited, state_with_terminals
+        return transitions, queue, visited
 
     @classmethod
     def construct_enka_transitions(cls, states, start_utils):
         state_0 = {"production": states[0], "terminals": "!"}
-        state_with_terminals = [state_0]
         transitions = []
         queue = [state_0]
         visited = [state_0]
-
-        state_enumeration = {}
+        state_enumeration = [state_0]
 
         while queue:
             current_state = queue.pop(0)
-
-            state_enumeration[len(state_enumeration)] = current_state
-            current_state_number = len(state_enumeration) - 1
+            current_state_number = state_enumeration.index(current_state)
 
             right_current_state = current_state["production"]["right"]
             parser_read_point = right_current_state.index(0)
@@ -115,16 +105,20 @@ class ENFA:
                     "production": input_transition_state,
                     "terminals": current_state["terminals"],
                 }
-                state_enumeration[len(state_enumeration)] = new_state
-                new_state_number = len(state_enumeration) - 1
+
+                if new_state in state_enumeration:
+                    new_state_number = state_enumeration.index(new_state)
+                else:
+                    state_enumeration.append(new_state)
+                    new_state_number = len(state_enumeration) - 1
 
                 transition = {
                     "delta": delta,
                     "state": new_state_number,
                 }
-                
-                transitions, queue, visited, state_with_terminals = cls.bfs_check(
-                    visited, queue, transitions, transition, new_state, state_with_terminals
+
+                transitions, queue, visited = cls.bfs_check(
+                    visited, queue, transitions, transition, new_state
                 )
 
                 epsilon_transition_states = [
@@ -135,47 +129,46 @@ class ENFA:
 
                 for state in epsilon_transition_states:
                     delta = [current_state_number, "$"]
-                    terminals = cls.find_terminals(right_current_state[parser_read_point+2:], current_state, start_utils)
+                    terminals = cls.find_terminals(right_current_state[parser_read_point + 2:], current_state,
+                                                   start_utils)
 
-                    new_state = { "production": state, "terminals": terminals }
-                    state_enumeration[len(state_enumeration)] = new_state
-                    new_state_number = len(state_enumeration) - 1
+                    new_state = {"production": state, "terminals": terminals}
+
+                    if new_state in state_enumeration:
+                        new_state_number = state_enumeration.index(new_state)
+                    else:
+                        state_enumeration.append(new_state)
+                        new_state_number = len(state_enumeration) - 1
 
                     transition = {
                         "delta": delta,
                         "state": new_state_number,
                     }
-                    transitions, queue, visited, state_with_terminals = cls.bfs_check(
-                        visited, queue, transitions, transition, new_state, state_with_terminals
+                    transitions, queue, visited = cls.bfs_check(
+                        visited, queue, transitions, transition, new_state
                     )
 
-        return transitions, state_with_terminals, state_enumeration
+        return transitions, state_enumeration
 
-
-    # ova union funkcija je upitna dosta
-    @staticmethod
-    def union_list_dict(list1, list2):
-        union_list = list(list1)
-        for el in list2:
-            if el not in union_list:
-                union_list.append(el)
-        return union_list
+    @cache
+    def find_transitions(self, state_number, symbol):
+        return list(filter(lambda x: x['delta'] == [state_number, symbol], self.transitions))
 
     def epsilon_closure(self, start_state_number):
-        surrounding = {start_state_number}
+        closure = {start_state_number}
         queue = {start_state_number}
+        visited = set()
 
         while queue:
             state_number = queue.pop()
-            for episilon_transition in filter(lambda x: x['delta'] == [state_number, '$'], self.transitions):
-                surrounding.update([episilon_transition['state']])
+            for episilon_transition in self.find_transitions(state_number, '$'):
+                closure.add(episilon_transition['state'])
 
-                to_visit = map(lambda x: x['state'],
-                               filter(lambda x: x['delta'] == [episilon_transition['state'], '$'], self.transitions))
+                if episilon_transition['state'] not in visited:
+                    queue.add(episilon_transition['state'])
+            visited.add(state_number)
 
-                queue.update(list(to_visit))
-
-        return list(surrounding)
+        return list(closure)
 
     def get_epsilon_closures(self):
         """
@@ -184,8 +177,7 @@ class ENFA:
         :return:
         """
         epsilon_dict = []
-        for state_number, _ in self.state_enumeration.items():
-            t = time.time()
+        for state_number in range(len(self.state_enumeration)):
             epsilon = self.epsilon_closure(state_number)
 
             epsilon_dict.append({'state': state_number, 'epsilon': epsilon})
@@ -195,32 +187,24 @@ class ENFA:
         """Convert ENFA to NFA by removing epsilon-transitions."""
 
         nka_transitions = []
-        for state in self.state_with_terminals:
-            inner_epsilon = list(filter(lambda x: x['state'] == state, self.epsilon_closures))[0]['epsilon']
-            if state['production']['left'] == self.non_terminals[0]:
-                state = inner_epsilon
-            for char in self.terminals + self.non_terminals:
-                delta = [state, char]
+        for state_number in range(len(self.state_enumeration)):
+            epsilon_closure = self.epsilon_closures[state_number]['epsilon']
 
-                inner_states = []
-                for inner_state in inner_epsilon:
-                    transition_list = filter(lambda x: x['delta'][0] == inner_state and x['delta'][1] == char,
-                                             self.transitions)
-                    transition_list = list(transition_list)
+            for symbol in self.terminals + self.non_terminals:
+                # active_states = map(lambda x: self.epsilon_closures[x['state']]['epsilon'],
+                #                     filter(lambda x: x['delta'][0] in epsilon_closure and x['delta'][1] == symbol,
+                #                            self.transitions))
 
-                    if len(transition_list) > 0:
-                        for transition in transition_list:
-                            in_s = transition['state']
+                active_states = []
+                for epsilon_state in epsilon_closure:
+                    transitions = self.find_transitions(epsilon_state, symbol)
+                    for t in transitions:
+                        active_states.extend(self.epsilon_closures[t['state']]['epsilon'])
 
-                            if in_s not in inner_states:
-                                inner_states.append(in_s)
-
-                output_states = []
-                if len(inner_states) > 0:
-                    for in_s in inner_states:
-                        output_states = self.union_list_dict(output_states, list(
-                            filter(lambda x: x['state'] == in_s, self.epsilon_closures))[0]['epsilon'])
-                    transition = {'delta': delta, 'state': output_states}
-                    nka_transitions.append(transition)
-
+                # for s in epsilon_closure:
+                #     active_states.extend(list(map(lambda x: self.epsilon_closures[x['state']]['epsilon'],
+                #                                   self.find_transitions(s, symbol))))
+                if len(active_states) != 0:
+                    nka_transitions.append({'delta': [state_number, symbol],
+                                            'state': active_states})
         self.transitions = nka_transitions
