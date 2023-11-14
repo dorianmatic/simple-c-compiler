@@ -1,6 +1,6 @@
 import time
 from functools import cache
-from StartSet import *
+from lab2.utils.StartSet import *
 
 
 class ENFA:
@@ -167,7 +167,7 @@ class ENFA:
                     queue.add(episilon_transition['state'])
             visited.add(state_number)
 
-        return list(closure)
+        return frozenset(closure)
 
     def get_epsilon_closures(self):
         """
@@ -181,29 +181,3 @@ class ENFA:
 
             epsilon_dict.append({'state': state_number, 'epsilon': epsilon})
         return epsilon_dict
-
-    # def to_nka(self):
-    #     """Convert ENFA to NFA by removing epsilon-transitions."""
-
-    #     nka_transitions = []
-    #     for state_number in range(len(self.state_enumeration)):
-    #         epsilon_closure = self.epsilon_closures[state_number]['epsilon']
-
-    #         for symbol in self.terminals + self.non_terminals:
-    #             # active_states = map(lambda x: self.epsilon_closures[x['state']]['epsilon'],
-    #             #                     filter(lambda x: x['delta'][0] in epsilon_closure and x['delta'][1] == symbol,
-    #             #                            self.transitions))
-
-    #             active_states = []
-    #             for epsilon_state in epsilon_closure:
-    #                 transitions = self.find_transitions(epsilon_state, symbol)
-    #                 for t in transitions:
-    #                     active_states.extend(self.epsilon_closures[t['state']]['epsilon'])
-
-    #             # for s in epsilon_closure:
-    #             #     active_states.extend(list(map(lambda x: self.epsilon_closures[x['state']]['epsilon'],
-    #             #                                   self.find_transitions(s, symbol))))
-    #             if len(active_states) != 0:
-    #                 nka_transitions.append({'delta': [state_number, symbol],
-    #                                         'state': active_states})
-    #     self.transitions = nka_transitions
