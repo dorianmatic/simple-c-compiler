@@ -41,7 +41,6 @@ class DFA:
                 state_productions.append(list(map(lambda x: enfa.state_enumeration[x], state_output)))
                 added.append(state_output)
 
-            # print(*dka_transitions, sep='\n')
             transition['state'] = added.index(state_output)
             transition['delta'][0] = added.index(state_delta)
 
@@ -56,12 +55,15 @@ class DFA:
 
         while queue:
             state = queue.pop()
+            print('-------------', state)
             for symbol in enfa.terminals + enfa.non_terminals:
-                output = chain.from_iterable(map(lambda x: enfa.epsilon_closures[x[0]['state']]['epsilon'] if x else [],
-                                                 map(lambda x: enfa.find_transitions(x, symbol),
-                                                     state)))
+                # output = chain.from_iterable(map(lambda x: enfa.epsilon_closures[x[0]['state']]['epsilon'] if x else [],
+                #                                  map(lambda x: enfa.find_transitions(x, symbol),
+                #                                      state)))
+
+                output = chain.from_iterable(map(lambda x: enfa.find_closure_for_transition(x, symbol), state))
                 output = frozenset(output)
-                if len(output) != 0:
+                if output:
                     dka_transitions.append({'delta': [state, symbol], 'state': output})
                     if output not in visited and output not in queue:
                         queue.add(output)

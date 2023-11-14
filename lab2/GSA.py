@@ -2,10 +2,6 @@ import fileinput
 import pickle
 import time
 from pathlib import Path
-
-# from lab2.utils.DFA import *
-# from lab2.utils.ENFA import ENFA
-
 from lab2.without_NFA.DFA import DFA
 from lab2.without_NFA.ENFA import ENFA
 from lab2.utils.LRParser import LRParser
@@ -108,9 +104,17 @@ if __name__ == "__main__":
     enfa = ENFA.from_context_free_grammar(productions, terminals, non_terminals)
     print(f"ENFA.from_context_free_grammar -> {time.time() - t0}")
 
+    # t = time.time()
+    # enfa.to_nka()
+    # print(f".to_nka() -> {time.time() - t}")
+
     t = time.time()
     dfa = DFA.from_enfa(enfa)
     print(f"DFA.from_nka -> {time.time() - t}")
+
+    # t = time.time()
+    # dfa = DFA.from_nka(enfa)
+    # print(f"DFA.from_nka -> {time.time() - t}")
 
     # t = time.time()
     parser = LRParser.from_dfa(dfa, productions)

@@ -70,7 +70,7 @@ class DFA:
                 dka_transition = { 'delta': [current_state, symbol], 'state': new_state }
                 if len(new_state) != 0 and dka_transition not in dka_transitions:
                     dka_transitions.append(dka_transition)
-                    if new_state not in visited and len(new_state) != 0:
+                    if new_state not in visited:
                         queue.append(new_state)
             visited.append(current_state)
 

@@ -153,6 +153,12 @@ class ENFA:
     def find_transitions(self, state_number, symbol):
         return list(filter(lambda x: x['delta'] == [state_number, symbol], self.transitions))
 
+    @cache
+    def find_closure_for_transition(self, state_number, symbol):
+        t = self.find_transitions(state_number, symbol)
+
+        return self.epsilon_closures[t[0]['state']]['epsilon'] if t else []
+
     def epsilon_closure(self, start_state_number):
         closure = {start_state_number}
         queue = {start_state_number}

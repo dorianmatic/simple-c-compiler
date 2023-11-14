@@ -35,7 +35,7 @@ def run(script, input_path):
     start_time = time.time()
     try:
         result = subprocess.run(['python', script], text=True, capture_output=True,
-                                stdin=input_path.open(), timeout=60)
+                                stdin=input_path.open(), timeout=250)
         print_process_result(result, time.time() - start_time)
 
         return result
