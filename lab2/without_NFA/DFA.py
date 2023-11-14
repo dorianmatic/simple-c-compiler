@@ -55,13 +55,9 @@ class DFA:
 
         while queue:
             state = queue.pop()
-            print('-------------', state)
             for symbol in enfa.terminals + enfa.non_terminals:
-                # output = chain.from_iterable(map(lambda x: enfa.epsilon_closures[x[0]['state']]['epsilon'] if x else [],
-                #                                  map(lambda x: enfa.find_transitions(x, symbol),
-                #                                      state)))
-
-                output = chain.from_iterable(map(lambda x: enfa.find_closure_for_transition(x, symbol), state))
+                output = chain.from_iterable(map(lambda x: enfa.epsilon_closures[x[0]]['epsilon'] if x else [],
+                                                 map(lambda x: enfa.transitions[(x, symbol)], state)))
                 output = frozenset(output)
                 if output:
                     dka_transitions.append({'delta': [state, symbol], 'state': output})

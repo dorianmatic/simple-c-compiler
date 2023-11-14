@@ -1,5 +1,5 @@
 import time
-from functools import cache
+from collections import defaultdict
 from lab2.utils.StartSet import *
 
 
@@ -77,7 +77,7 @@ class ENFA:
     @classmethod
     def construct_enka_transitions(cls, states, start_utils):
         state_0 = {"production": states[0], "terminals": "!"}
-        transitions = []
+        transitions = defaultdict(list)
         queue = [state_0]
         visited = [state_0]
         state_enumeration = [state_0]
@@ -91,7 +91,7 @@ class ENFA:
 
             if parser_read_point + 1 < len(right_current_state):
                 inp = right_current_state[parser_read_point + 1]
-                delta = [current_state_number, inp]
+                delta = (current_state_number, inp)
                 new_right_state = list(right_current_state)
                 new_right_state.remove(0)
                 new_right_state.insert(parser_read_point + 1, 0)
@@ -111,14 +111,11 @@ class ENFA:
                     state_enumeration.append(new_state)
                     new_state_number = len(state_enumeration) - 1
 
-                transition = {
-                    "delta": delta,
-                    "state": new_state_number,
-                }
+                if new_state not in visited:
+                    visited.append(new_state)
+                    queue.append(new_state)
+                transitions[delta].append(new_state_number)
 
-                transitions, queue, visited = cls.bfs_check(
-                    visited, queue, transitions, transition, new_state
-                )
 
                 epsilon_transition_states = [
                     state
@@ -127,37 +124,23 @@ class ENFA:
                 ]
 
                 for state in epsilon_transition_states:
-                    delta = [current_state_number, "$"]
+                    delta = (current_state_number, "$")
                     terminals = cls.find_terminals(right_current_state[parser_read_point + 2:], current_state,
                                                    start_utils)
 
                     new_state = {"production": state, "terminals": terminals}
-
                     if new_state in state_enumeration:
                         new_state_number = state_enumeration.index(new_state)
                     else:
                         state_enumeration.append(new_state)
                         new_state_number = len(state_enumeration) - 1
 
-                    transition = {
-                        "delta": delta,
-                        "state": new_state_number,
-                    }
-                    transitions, queue, visited = cls.bfs_check(
-                        visited, queue, transitions, transition, new_state
-                    )
+                    if new_state not in visited:
+                        visited.append(new_state)
+                        queue.append(new_state)
+                    transitions[delta].append(new_state_number)
 
         return transitions, state_enumeration
-
-    @cache
-    def find_transitions(self, state_number, symbol):
-        return list(filter(lambda x: x['delta'] == [state_number, symbol], self.transitions))
-
-    @cache
-    def find_closure_for_transition(self, state_number, symbol):
-        t = self.find_transitions(state_number, symbol)
-
-        return self.epsilon_closures[t[0]['state']]['epsilon'] if t else []
 
     def epsilon_closure(self, start_state_number):
         closure = {start_state_number}
@@ -166,11 +149,11 @@ class ENFA:
 
         while queue:
             state_number = queue.pop()
-            for episilon_transition in self.find_transitions(state_number, '$'):
-                closure.add(episilon_transition['state'])
+            for episilon_state in self.transitions[(state_number, '$')]:
+                closure.add(episilon_state)
 
-                if episilon_transition['state'] not in visited:
-                    queue.add(episilon_transition['state'])
+                if episilon_state not in visited:
+                    queue.add(episilon_state)
             visited.add(state_number)
 
         return frozenset(closure)
