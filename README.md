@@ -17,3 +17,4 @@ Running on provided test set:
 3. Run tests with ```python lab1/test/integration_tests/lab1_test.py```
 
 ---
+## Lab 2: Syntax analysis
