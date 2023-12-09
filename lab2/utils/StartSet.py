@@ -1,13 +1,13 @@
 from lab2.utils.helpers import *
 
-class Zapocinje:
-    """Contains all methods needed to calculate the Zapocinje set of characters"""
+class StartsUtils:
+    """Contains all methods needed to calculate the FIRST sets."""
 
     def __init__(self, productions, terminals, non_terminals):
         self.productions = productions
         self.terminals = terminals
         self.non_terminals = non_terminals
-        self.empty_non_terminals = self.find_empty_nonterminals(self.productions, [])
+        self.empty_non_terminals = self.find_empty_non_terminals(self.productions, [])
         self.starts_with_dict = {}
 
     def starts_with(self, non_terminal):
@@ -37,8 +37,9 @@ class Zapocinje:
         self.starts_with_dict[non_terminal]=possible_first_symbols
         return possible_first_symbols
 
-    def find_empty_nonterminals(self, productions, empty_nonterminals):
-        """Returns a list of empty nonterminals"""
+    def find_empty_non_terminals(self, productions, empty_nonterminals):
+        """Returns a list of empty non-terminals"""
+
         empty_right = ["$"]
         added = False
         for production in productions:
@@ -59,11 +60,12 @@ class Zapocinje:
                 for production in self.productions
                 if production["left"] not in empty_nonterminals
             ]
-            return self.find_empty_nonterminals(filter_productions, empty_nonterminals)
+            return self.find_empty_non_terminals(filter_productions, empty_nonterminals)
         return empty_nonterminals
 
     def generate_empty(self, characters):
         """Returns True if it is possible to generate an empty char from the characters else False"""
+
         for char in characters:
             if char not in self.empty_non_terminals:
                 return False

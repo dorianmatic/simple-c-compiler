@@ -9,7 +9,7 @@ from lab2.utils.LRParser import LRParser
 class LineTypes:
     """Enum for different line types."""
 
-    TERMINAL = "terminal "
+    TERMINAL = "terminal"
     NONTERMINAL = "non-terminal"
     SYN = "syn"
     PRODUCTION = "production"
@@ -36,6 +36,7 @@ def process_symbols(symbols):
 
 def process_production_line(production, production_line, left):
     """A function which adds production rules to the production list."""
+
     if production_line.startswith("<"):
         newLeftSymbol = True
         left = production_line.strip()
@@ -53,6 +54,8 @@ def create_empty_production():
 
 
 def prepare_pickle(terminals, non_terminals, syncs, parser):
+    """Prepare data for pickling."""
+
     return {
         'non_terminals': non_terminals,
         'sync_non_terminals': syncs,
@@ -63,7 +66,8 @@ def prepare_pickle(terminals, non_terminals, syncs, parser):
 
 
 def add_starting_production(nonterminals, productions):
-    """Adding an artificial starting nonterminal and starting production per instructions on pg. 31"""
+    """Adding an artificial starting non-terminal and starting production."""
+
     starting_nonterminal = "<S0>"
     production = {"left": starting_nonterminal, "right": [nonterminals[0]]}
     nonterminals.insert(0, starting_nonterminal)
@@ -99,17 +103,9 @@ if __name__ == "__main__":
 
     non_terminals, productions = add_starting_production(non_terminals, productions)
 
-    # t0 = time.time()
     enfa = ENFA.from_context_free_grammar(productions, terminals, non_terminals)
-    # print(f"ENFA.from_context_free_grammar -> {time.time() - t0}")
-
-    # t = time.time()
     dfa = DFA.from_enfa(enfa)
-    # print(f"DFA.from_nka -> {time.time() - t}")
 
-    # t = time.time()
     parser = LRParser.from_dfa(dfa, productions)
-    # print(f"LRParser.from_dfa -> {time.time() - t}")
-
     pickle.dump(prepare_pickle(terminals, non_terminals, sync_non_terminals, parser),
                 Path(__file__).parent.joinpath('analizator', 'SA_data.pkl').open('wb'))

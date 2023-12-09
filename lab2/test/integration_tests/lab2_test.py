@@ -51,8 +51,7 @@ parser.add_argument('--generator', help='Lexical Analyzer Generator script path'
 parser.add_argument('--analyzer', help='Lexical Analyzer script path')
 
 args = parser.parse_args()
-
-examples_path = args.examples or Path(__file__).parents[2].joinpath('examples/lab2_teza')
+examples_path = Path(args.examples) or Path(__file__).parents[2].joinpath('examples/lab2_teza')
 generator_script = args.generator or Path(__file__).parents[2].joinpath('GSA.py')
 syntax_analyzer_script = args.analyzer or Path(__file__).parents[2].joinpath('analizator/SA.py')
 
