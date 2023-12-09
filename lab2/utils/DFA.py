@@ -23,11 +23,11 @@ class DFA:
         :return: DFA
         """
 
-        dka_transitions, state_productions = cls.to_dfa(enfa)
+        dka_transitions, state_productions = cls._to_dfa(enfa)
         return cls(dka_transitions, state_productions)
 
     @classmethod
-    def numerate_states(cls, enfa, dka_transitions):
+    def _numerate_states(cls, enfa, dka_transitions):
         """Numerates the states and add the number,state pair to the state_productions"""
 
         state_productions = []
@@ -47,7 +47,7 @@ class DFA:
         return dka_transitions, state_productions
 
     @classmethod
-    def to_dfa(cls, enfa):
+    def _to_dfa(cls, enfa):
         dka_transitions = []
         start_state = enfa.epsilon_closures[0]['epsilon']
         visited = set()
@@ -65,4 +65,4 @@ class DFA:
                         queue.add(output)
 
             visited.add(state)
-        return cls.numerate_states(enfa, dka_transitions)
+        return cls._numerate_states(enfa, dka_transitions)
