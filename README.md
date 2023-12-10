@@ -30,3 +30,6 @@ Running on official test set:
 1. Download official test set.
 2. Copy ```lab2_teza``` folder into ```lab2/examples```
 3. Run tests with ```python lab2/test/integration_tests/lab2_test.py```
+
+---
+## Lab 3: Semantic analysis
