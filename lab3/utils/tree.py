@@ -1,5 +1,5 @@
 class Node:
-    def __init__(self, name):
+    def __init__(self, name: str):
         self.name = name
         self.parent = None
         self.children = []
@@ -26,7 +26,7 @@ def build_tree(lines):
     return last_at_level[0]
 
 
-def print_tree(node, indent=0):
+def print_tree(node: Node, indent=0):
     print(' ' * indent + node.name)
 
     for child in node.children:
