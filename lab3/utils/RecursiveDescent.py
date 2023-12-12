@@ -29,8 +29,14 @@ class RecursiveDescent:
             # TODO: Implement variables scoping ...
             pass
         elif children_names == ['BROJ']:
+            if not Types.validate_int(node.children[0].value):
+                self._terminate('Int invalid')
+
             return Types.INT, False
         elif children_names == ['ZNAK']:
+            if not Types.validate_char(node.children[0].value):
+                self._terminate('Int invalid')
+
             return Types.CHAR, False
         elif children_names == ['NIZ_ZNAKOVA']:
             return Types.ARRAY_CONST_CHAR, False
@@ -46,7 +52,12 @@ class RecursiveDescent:
             pass
         elif children_names == ['<postfiks_izraz>', 'L_ZAGRADA', 'D_ZAGRADA']:
             pass
+        elif children_names == ['<postfiks_izraz>', 'L_ZAGRADA', '<lista_argumenata>', 'D_ZAGRADA']:
+            pass
+        elif children_names == ['<postfiks_izraz>', 'OP_INC'] or children_names == ['<postfiks_izraz>', 'OP_DEC']:
+            pass
         
+
 
     def _expression(self, node: Node):
         pass
