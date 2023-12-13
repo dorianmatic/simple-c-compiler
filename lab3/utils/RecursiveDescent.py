@@ -1,6 +1,7 @@
 from lab3.utils.tree import Node
 from lab3.utils.types import Types
 
+
 class DescentException(Exception):
     def __init__(self, message):
         super().__init__(message)
@@ -52,7 +53,7 @@ class RecursiveDescent:
         if children_names == ['<primary_expression>']:
             return self._primary_expression(node.children[0])
         elif children_names == ['<postfiks_izraz>', 'L_UGL_ZAGRADA', '<izraz>', 'D_UGL_ZAGRADA']:
-            postfix_type, postfix_l_expression =  self._postfix_expression(node.children[0])
+            postfix_type, postfix_l_expression = self._postfix_expression(node.children[0])
 
             if not Types.is_array(postfix_type):
                 self._terminate('')
@@ -134,7 +135,6 @@ class RecursiveDescent:
 
             return Types.to_const(type_specifier_type)
 
-
     def _type_specifier(self, node: Node):
         children_names = self._get_children_names(node)
 
@@ -145,39 +145,245 @@ class RecursiveDescent:
         elif children_names == ['KR_INT']:
             return Types.INT
 
-    def _multiplicative_expression(self, node: Node):
-        children_names = self._get_children_names(node)
-
-        if children_names == ['<cast_expression>']:
-            return self._cast_expression(node.children[0])
-        elif (children_names == ['<multiplikativni_izraz>', 'OP_PUTA', '<cast_izraz>'] or
-              children_names == ['<multiplikativni_izraz>', 'OP_DIJELI', '<cast_izraz>'] or
-              children_names == ['<multiplikativni_izraz>', 'OP_MOD', '<cast_izraz>']):
-            multiplicative_exp_type, _ = self._multiplicative_expression(node.children[0])
-            if not Types.is_castable(multiplicative_exp_type, Types.INT):
+    def _single_operator_meta_expression(self, node: Node, condition_one: bool, condition_two: bool,
+                                         cond_one_check: callable, cond_two_check_one: callable,
+                                         cond_two_check_two: callable):
+        if condition_one:
+            return cond_one_check(node.children[0])
+        elif condition_two:
+            type_one, _ = cond_two_check_one(node.children[0])
+            if not Types.is_castable(type_one, Types.INT):
                 self._terminate('')
 
-            cast_exp_type, _ = self._cast_expression(node.children[2])
-            if not Types.is_castable(cast_exp_type, Types.INT):
+            type_two, _ = cond_two_check_two(node.children[2])
+            if not Types.is_castable(type_two, Types.INT):
                 self._terminate('')
 
             return Types.INT, False
 
+    def _multiplicative_expression(self, node: Node):
+        children_names = self._get_children_names(node)
+
+        return self._single_operator_meta_expression(
+            node,
+            children_names == ['<cast_expression>'],
+            (children_names == ['<multiplikativni_izraz>', 'OP_PUTA', '<cast_izraz>'] or
+             children_names == ['<multiplikativni_izraz>', 'OP_DIJELI', '<cast_izraz>'] or
+             children_names == ['<multiplikativni_izraz>', 'OP_MOD', '<cast_izraz>']),
+            self._cast_expression,
+            self._multiplicative_expression,
+            self._cast_expression
+        )
+
     def _additive_expression(self, node: Node):
         children_names = self._get_children_names(node)
 
-        if children_names == ['<multiplikativni_izraz>']:
-            pass
-        elif (children_names == ['<aditivni_izraz>', 'PLUS', '<multiplikativni_izraz>'] or
-              children_names == ['<aditivni_izraz>', 'MINUS', '<multiplikativni_izraz>']):
-            pass
+        return self._single_operator_meta_expression(
+            node,
+            children_names == ['<multiplikativni_izraz>'],
+            (children_names == ['<aditivni_izraz>', 'PLUS', '<multiplikativni_izraz>'] or
+             children_names == ['<aditivni_izraz>', 'MINUS', '<multiplikativni_izraz>']),
+            self._multiplicative_expression,
+            self._additive_expression,
+            self._multiplicative_expression
+        )
 
+    def _relational_expression(self, node: Node):
+        children_names = self._get_children_names(node)
+
+        return self._single_operator_meta_expression(
+            node,
+            children_names == ['<aditivni_izraz>'],
+            (children_names == ['<odnosni_izraz>', 'OP_LT', '<aditivni_izraz>'] or
+             children_names == ['<odnosni_izraz>', 'OP_GT', '<aditivni_izraz>'] or
+             children_names == ['<odnosni_izraz>', 'OP_LTE', '<aditivni_izraz>'] or
+             children_names == ['<odnosni_izraz>', 'OP_GTE', '<aditivni_izraz>']),
+            self._additive_expression,
+            self._relational_expression,
+            self._additive_expression
+        )
+
+    def _equivalence_expression(self, node: Node):
+        children_names = self._get_children_names(node)
+
+        return self._single_operator_meta_expression(
+            node,
+            children_names == ['<odnosni_izraz>'],
+            (children_names == ['<jednakosni_izraz>', 'OP_EQ', '<odnosni_izraz>'] or
+             children_names == ['<jednakosni_izraz>', 'OP_NEQ', '<odnosni_izraz>']),
+            self._relational_expression,
+            self._equivalence_expression,
+            self._relational_expression
+        )
+
+    def _bin_and_expression(self, node: Node):
+        children_names = self._get_children_names(node)
+
+        return self._single_operator_meta_expression(
+            node,
+            children_names == ['<jednakosni_izraz>'],
+            children_names == ['<bin_i_izraz>', 'OP_BIN_I', '<jednakosni_izraz>'],
+            self._equivalence_expression,
+            self._bin_and_expression,
+            self._equivalence_expression
+        )
+
+    def _bin_xor_expression(self, node: Node):
+        children_names = self._get_children_names(node)
+
+        return self._single_operator_meta_expression(
+            node,
+            children_names == ['<bin_i_izraz>'],
+            children_names == ['<bin_xili_izraz>', 'OP_BIN_XILI', '<bin_i_izraz>'],
+            self._bin_and_expression,
+            self._bin_xor_expression,
+            self._bin_and_expression
+        )
+
+    def _bin_or_expression(self, node: Node):
+        children_names = self._get_children_names(node)
+
+        return self._single_operator_meta_expression(
+            node,
+            children_names == ['<bin_xili_izraz>'],
+            children_names == ['<bin_ili_izraz>', 'OP_BIN_ILI', '<bin_xili_izraz>'],
+            self._bin_xor_expression,
+            self._bin_or_expression,
+            self._bin_xor_expression
+        )
+
+    def _logical_and_expression(self, node: Node):
+        children_names = self._get_children_names(node)
+
+        return self._single_operator_meta_expression(
+            node,
+            children_names == ['<bin_ili_izraz>'],
+            children_names == ['<log_i_izraz>', 'OP_I', '<bin_ili_izraz>'],
+            self._bin_or_expression,
+            self._logical_and_expression,
+            self._bin_or_expression
+        )
+
+    def _logical_or_expression(self, node: Node):
+        children_names = self._get_children_names(node)
+
+        return self._single_operator_meta_expression(
+            node,
+            children_names == ['<log_i_izraz>'],
+            children_names == ['<log_ili_izraz>', 'OP_ILI', '<log_i_izraz>'],
+            self._logical_and_expression,
+            self._logical_or_expression,
+            self._logical_and_expression
+        )
 
     def _assignment_expression(self, node: Node):
-        pass
+        children_names = self._get_children_names(node)
+
+        if children_names == ['<log_ili_izraz>']:
+            return self._logical_or_expression(node.children[0])
+        elif children_names == ['<postfiks_izraz>', 'OP_PRIDRUZI', '<izraz_pridruzivanja>']:
+            postfix_exp_type, postfix_exp_l = self._postfix_expression(node.children[0])
+            assignment_exp_type, _ = self._assignment_expression(node.children[2])
+            if not Types.is_castable(postfix_exp_type, assignment_exp_type) or postfix_exp_l == False:
+                self._terminate('')
+
+            return postfix_exp_type, False
 
     def _expression(self, node: Node):
-        pass
+        children_names = self._get_children_names(node)
+
+        if children_names == ['<izraz_pridruzivanja>']:
+            pass
+        elif children_names == ['<izraz>', 'ZAREZ', '<izraz_pridruzivanja>']:
+            self._expression(node.children[0])
+            assignment_exp_type, _ = self._assignment_expression(node.children[2])
+
+            return assignment_exp_type, False
+
+    def _complex_command(self, node: Node):
+        children_names = self._get_children_names(node)
+
+        if children_names == ['L_VIT_ZAGRADA', '<lista_naredbi>', 'D_VIT_ZAGRADA']:
+            self._command_list(node.children[1])
+        elif children_names == ['L_VIT_ZAGRADA', '<lista_deklaracija>', '<lista_naredbi>', 'D_VIT_ZAGRADA']:
+            self._declaration_list(node.children[1])
+            self._command_list(node.children[2])
+
+    def _command_list(self, node: Node):
+        children_names = self._get_children_names(node)
+
+        if children_names == ['<naredba>']:
+            self._command(node.children[0])
+        elif children_names == ['<lista_naredbi>', '<naredba>']:
+            self._command_list(node.children[0])
+            self._command(node.children[1])
+
+    def _command(self, node: Node):
+         # TODO: Implement this
+         pass
+
+    def _expression_command(self, node: Node):
+        children_names = self._get_children_names(node)
+
+        if children_names == ['TOCKAZAREZ']:
+            return Types.INT
+        elif children_names == ['<izraz>', 'TOCKAZAREZ']:
+            expression_type, _ = self._expression(node.children[0])
+
+            return expression_type
+
+    def _if_command(self, node: Node):
+        children_names = self._get_children_names(node)
+
+        if children_names == ['KR_IF', 'L_ZAGRADA', '<izraz>', 'D_ZAGRADA', '<naredba>']:
+            expression_type, _ = self._expression(node.children[2])
+            if not Types.is_castable(expression_type, Types.INT):
+                self._terminate('')
+
+            self._command(node.children[4])
+        elif children_names == ['KR_IF', 'L_ZAGRADA', '<izraz>', 'D_ZAGRADA', '<naredba>', 'KR_ELSE', '<naredba>']:
+            expression_type, _ = self._expression(node.children[2])
+            if not Types.is_castable(expression_type, Types.INT):
+                self._terminate('')
+
+            self._command(node.children[4])
+            self._command(node.children[6])
+
+    def _loop_command(self, node: Node):
+        children_names = self._get_children_names(node)
+
+        if children_names == ['KR_WHILE', 'L_ZAGRADA', '<izraz>', 'D_ZAGRADA', '<naredba>']:
+            exp_type, _ = self._expression(node.children[2])
+            if not Types.is_castable(exp_type, Types.INT):
+                self._terminate('')
+            self._command(node.children[4])
+        elif children_names == ['KR_FOR', 'L_ZAGRADA', '<izraz_naredba>', '<izraz_naredba>', 'D_ZAGRADA', '<naredba>']:
+            self._expression_command(node.children[2])
+            exp_command_type = self._expression_command(node.children[3])
+            if not Types.is_castable(exp_command_type, Types.INT):
+                self._terminate('')
+            self._command(node.children[5])
+        elif children_names == ['KR_FOR', 'L_ZAGRADA', '<izraz_naredba>', '<izraz_naredba>', '<izraz>', 'D_ZAGRADA', '<naredba>']:
+            self._expression_command(node.children[2])
+            exp_command_type = self._expression_command(node.children[3])
+            if not Types.is_castable(exp_command_type, Types.INT):
+                self._terminate('')
+            self._expression(node.children[4])
+            self._command(node.children[6])
+
+    def _jump_command(self, node: Node):
+        children_names = self._get_children_names(node)
+
+        if children_names == ['KR_CONTINUE', 'TOCKAZAREZ'] or children_names == ['KR_BREAK', 'TOCKAZAREZ']:
+            # TODO: Check if inside loop...
+            pass
+        elif children_names == ['KR_RETURN', 'TOCKAZAREZ']:
+            # TODO: Check if inside void function
+            pass
+        elif children_names == ['KR_RETURN', '<izraz>', 'TOCKAZAREZ']:
+            exp_type = self._expression(node.children[1])
+
+            # TODO: Check if exp_type is correct
 
     def _translation_unit(self, node: Node):
         children_names = self._get_children_names(node)
@@ -187,7 +393,6 @@ class RecursiveDescent:
         elif children_names == ['<prijevodna_jedinica>', '<vanjska_deklaracija>']:
             self._translation_unit(node.children[0])
             self._outer_declaration(node.children[0])
-
 
     def _outer_declaration(self, node: Node):
         children_names = self._get_children_names(node)
