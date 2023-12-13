@@ -58,4 +58,8 @@ class Types:
 
     @staticmethod
     def to_const(var_type):
-        return f'const(#{var_type})'
+        return f'const({var_type})'
+
+    @staticmethod
+    def to_array(var_type):
+        return f'niz({var_type})'

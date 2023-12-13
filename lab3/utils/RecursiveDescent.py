@@ -319,8 +319,8 @@ class RecursiveDescent:
             self._command(node.children[1])
 
     def _command(self, node: Node):
-         # TODO: Implement this
-         pass
+        # TODO: Implement this
+        pass
 
     def _expression_command(self, node: Node):
         children_names = self._get_children_names(node)
@@ -363,7 +363,8 @@ class RecursiveDescent:
             if not Types.is_castable(exp_command_type, Types.INT):
                 self._terminate('')
             self._command(node.children[5])
-        elif children_names == ['KR_FOR', 'L_ZAGRADA', '<izraz_naredba>', '<izraz_naredba>', '<izraz>', 'D_ZAGRADA', '<naredba>']:
+        elif children_names == ['KR_FOR', 'L_ZAGRADA', '<izraz_naredba>', '<izraz_naredba>', '<izraz>', 'D_ZAGRADA',
+                                '<naredba>']:
             self._expression_command(node.children[2])
             exp_command_type = self._expression_command(node.children[3])
             if not Types.is_castable(exp_command_type, Types.INT):
@@ -403,7 +404,88 @@ class RecursiveDescent:
             self._declaration(node.children[0])
 
     def _function_definition(self, node: Node):
-        pass
+        children_names = self._get_children_names(node)
+
+        if children_names == ['<ime_tipa>', 'IDN', 'L_ZAGRADA', 'KR_VOID', 'D_ZAGRADA', '<slozena_naredba>']:
+            type_name_type = self._type_name(node.children[0])
+            if Types.is_const(type_name_type):
+                self._terminate('')
+
+            # TODO: Check if function already defined.
+            # TODO: Check IDN definition
+
+            self._complex_command(node.children[5])
+        elif children_names == ['<ime_tipa>', 'IDN', 'L_ZAGRADA', '<lista_parametara>', 'D_ZAGRADA',
+                                '<slozena_naredba>']:
+            type_name_type = self._type_name(node.children[0])
+            if Types.is_const(type_name_type):
+                self._terminate('')
+
+            # TODO: Check if function already defined ...
+
+    def _parameter_list(self, node: Node):
+        children_names = self._get_children_names(node)
+
+        if children_names == ['<deklaracija_parametra>']:
+            param_declaration_type, param_declaration_name = self._parameter_declaration(node.children[0])
+
+            return [param_declaration_type], [param_declaration_name]
+        elif children_names == ['<lista_parametara>', 'ZAREZ', '<deklaracija_parametra>']:
+            param_list_types, param_list_names = self._parameter_list(node.children[0])
+            param_declaration_type, param_declaration_name = self._parameter_declaration(node.children[2])
+
+            if param_declaration_name in param_list_names:
+                self._terminate('')
+
+            return param_list_types + param_declaration_type, param_list_names + param_declaration_name
+
+    def _parameter_declaration(self, node: Node):
+        children_names = self._get_children_names(node)
+
+        if children_names == ['<ime_tipa>', 'IDN']:
+            type_name_type = self._type_name(node.children[0])
+            if type_name_type == Types.VOID:
+                self._terminate('')
+
+            # TODO: Is node.children[1].value okay?
+            return type_name_type, node.children[1].value
+        elif children_names == ['<ime_tipa>', 'IDN', 'L_UGL_ZAGRADA', 'D_UGL_ZAGRADA']:
+            type_name_type = self._type_name(node.children[0])
+            if type_name_type == Types.VOID:
+                self._terminate('')
+
+            return Types.to_array(type_name_type), node.children[1].value
+
+    def _declarations_list(self, node: Node):
+        children_names = self._get_children_names(node)
+
+        if children_names == ['<deklaracija>']:
+            self._declaration(node.children[0])
+        elif children_names == ['<lista_deklaracija>', '<deklaracija>']:
+            self._declarations_list(node.children[0])
+            self._declaration(node.children[1])
 
     def _declaration(self, node: Node):
-        pass
+        if self._get_children_names(node) == ['<ime_tipa>', '<lista_init_deklaratora>', 'TOCKAZAREZ']:
+            type_name_type = self._type_name(node.children[0])
+            self._init_declarators_list(node.children[1], type_name_type)
+
+    def _init_declarators_list(self, node: Node, ntype: str):
+        children_names = self._get_children_names(node)
+
+        if children_names == ['<init_deklarator>']:
+            self._init_declarator(node.children[0], ntype)
+        elif children_names == ['<lista_init_deklaratora>', 'ZAREZ', '<init_deklarator>']:
+            self._init_declarators_list(node.children[0], ntype)
+            self._init_declarator(node.children[2], ntype)
+
+    def _init_declarator(self, node: Node, ntype: str):
+        children_names = self._get_children_names(node)
+
+        if children_names == ['<izravni_deklarator>']:
+            direct_declarator_type = self._direct_declarator(node.children[0], ntype)
+            if Types.is_const(direct_declarator_type): #or Types.is_array(direct_declarator_type)
+                self._terminate('')
+        elif children_names == ['<izravni_deklarator>', 'OP_PRIDRUZI', '<inicijalizator>']:
+            direct_declarator_type = self._direct_declarator(node.children[0], ntype)
+            initializer_type = self._initializer(node.children[2])
