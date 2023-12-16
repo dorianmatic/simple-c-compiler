@@ -8,6 +8,7 @@ class Types:
     ARRAY_CONST_CHAR = 'niz(const(char))'
     ARRAY_CONST_INT = 'niz(const(int))'
     VOID = 'void'
+    FUNCTION = lambda parameter_types, return_type: {'parameter_types': parameter_types, 'return_type': return_type}
 
     CASTS = [
         (CONST_INT, INT), (INT, CONST_INT),
@@ -22,10 +23,9 @@ class Types:
         (CHAR, INT), (CONST_CHAR, INT)
     ]
 
-
     @staticmethod
     def validate_int(value):
-        return -2147483648 <= value <= 2147483647
+        return -2147483648 <= int(value) <= 2147483647
 
     @staticmethod
     def validate_char(value):

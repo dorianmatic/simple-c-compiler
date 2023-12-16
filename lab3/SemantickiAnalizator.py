@@ -15,5 +15,3 @@ if __name__ == '__main__':
         recursive_descent.descend()
     except DescentException as de:
         print(de)
-
-    print_tree(tree)
