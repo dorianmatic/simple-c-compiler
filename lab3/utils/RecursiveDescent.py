@@ -28,8 +28,13 @@ class RecursiveDescent:
         children_names = self._get_children_names(node)
 
         if children_names == ['IDN']:
-            # TODO: Implement variables scoping ...
-            pass
+            if declaration := Scope.get_declaration(node, node.children[0].name):
+                return (declaration['type'],
+                        not Types.is_const(declaration['type']) or Types.is_array(declaration['type']))
+            else:
+                self._terminate('')
+
+
         elif children_names == ['BROJ']:
             if not Types.validate_int(node.children[0].value):
                 self._terminate('Int invalid')
@@ -420,9 +425,12 @@ class RecursiveDescent:
             if Types.is_const(type_name_type):
                 self._terminate('')
 
-            # TODO: Check if function already defined.
-            # TODO: Check IDN definition
+            if declaration := Scope.get_declaration(node, node.children[1].name, only_global=True):
+                if declaration['definition'] or declaration['return_type'] != type_name_type or declaration[
+                    'parameter_types'] != [Types.VOID]:
+                    self._terminate('')
 
+            Scope.declare_function(node, node.children[1].name, [Types.VOID], type_name_type, True)
             self._complex_command(node.children[5])
         elif children_names == ['<ime_tipa>', 'IDN', 'L_ZAGRADA', '<lista_parametara>', 'D_ZAGRADA',
                                 '<slozena_naredba>']:
@@ -430,7 +438,17 @@ class RecursiveDescent:
             if Types.is_const(type_name_type):
                 self._terminate('')
 
-            # TODO: Check if function already defined ...
+            param_list_types, param_list_names = self._parameter_list(node.children[3])
+            if declaration := Scope.get_declaration(node, node.children[1].name, only_global=True):
+                if declaration['definition'] or declaration['return_type'] != type_name_type or declaration[
+                    'parameter_types'] != param_list_types:
+                    self._terminate('')
+
+            Scope.declare_function(node, node.children[1].name, param_list_types, type_name_type, True)
+            for var_type, var_name in zip(param_list_types, param_list_names):
+                Scope.declare_variable(node.children[5], var_name, var_type)
+
+            self._complex_command(node.children[5])
 
     def _parameter_list(self, node: Node):
         children_names = self._get_children_names(node)
@@ -515,14 +533,14 @@ class RecursiveDescent:
         if children_names == ['IDN']:
             if ntype == Types.VOID:
                 self._terminate('')
-            if Scope.is_declared(node, node.children[0].name, 1):
+            if Scope.get_declaration(node, node.children[0].name, 1):
                 self._terminate('')
 
             Scope.declare_variable(node, node.children[0].name, ntype)
-
+            return ntype
         elif children_names == ['IDN', 'L_UGL_ZAGRADA', 'BROJ', 'D_UGL_ZAGRADA']:
             if (ntype == Types.VOID
-                    or Scope.is_declared(node, node.children[0].name, 1)
+                    or Scope.get_declaration(node, node.children[0].name, 1)
                     or node.children[2].value > 1024 or node.children[2].value < 1):
                 self._terminate('')
 
@@ -530,9 +548,25 @@ class RecursiveDescent:
             return Types.to_array(ntype), node.children[2].value
 
         elif children_names == ['IDN', 'L_ZAGRADA', 'KR_VOID', 'D_ZAGRADA']:
-            pass
+            if declaration := Scope.get_declaration(node, node.children[0].name, 1):
+                if declaration['return_type'] != ntype or declaration['parameter_types'] != [Types.VOID]:
+                    self._terminate('')
+            else:
+                Scope.declare_function(node, node.children[0].name, [Types.VOID], ntype)
+
+            # Do we need to return something here?
+            return ''
         elif children_names == ['IDN', 'L_ZAGRADA', '<lista_parametara>', 'D_ZAGRADA']:
-            pass
+            param_list_types, _ = self._parameter_list(node.children[2])
+
+            if declaration := Scope.get_declaration(node, node.children[0].name, 1):
+                if declaration['return_type'] != ntype or declaration['parameter_types'] != param_list_types:
+                    self._terminate('')
+            else:
+                Scope.declare_function(node, node.children[0].name, param_list_types, ntype)
+
+            # Do we need to return something here?
+            return ''
 
     def _initializer(self, node: Node):
         children_names = self._get_children_names(node)
