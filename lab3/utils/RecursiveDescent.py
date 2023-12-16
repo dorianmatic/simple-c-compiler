@@ -1,5 +1,6 @@
-from lab3.utils.tree import Node
+from lab3.utils.generative_tree import Node
 from lab3.utils.types import Types
+from lab3.utils.Scope import Scope
 
 
 class DescentException(Exception):
@@ -306,7 +307,7 @@ class RecursiveDescent:
         if children_names == ['L_VIT_ZAGRADA', '<lista_naredbi>', 'D_VIT_ZAGRADA']:
             self._command_list(node.children[1])
         elif children_names == ['L_VIT_ZAGRADA', '<lista_deklaracija>', '<lista_naredbi>', 'D_VIT_ZAGRADA']:
-            self._declaration_list(node.children[1])
+            self._declarations_list(node.children[1])
             self._command_list(node.children[2])
 
     def _command_list(self, node: Node):
@@ -319,8 +320,16 @@ class RecursiveDescent:
             self._command(node.children[1])
 
     def _command(self, node: Node):
-        # TODO: Implement this
-        pass
+        children_names = self._get_children_names(node)
+
+        if children_names == ['<slozena_naredba>']:
+            self._complex_command(node.children[0])
+        elif children_names == ['<izraz_naredba>']:
+            self._expression_command(node.children[0])
+        elif children_names == ['<naredba_petlje>']:
+            self._loop_command(node.children[0])
+        elif children_names == ['<naredba_skoka>']:
+            self._jump_command(node.children[0])
 
     def _expression_command(self, node: Node):
         children_names = self._get_children_names(node)
@@ -503,11 +512,23 @@ class RecursiveDescent:
     def _direct_declarator(self, node: Node, ntype: str):
         children_names = self._get_children_names(node)
 
-        # TODO: Variable scoping
         if children_names == ['IDN']:
-            pass
+            if ntype == Types.VOID:
+                self._terminate('')
+            if Scope.is_declared(node, node.children[0].name, 1):
+                self._terminate('')
+
+            Scope.declare_variable(node, node.children[0].name, ntype)
+
         elif children_names == ['IDN', 'L_UGL_ZAGRADA', 'BROJ', 'D_UGL_ZAGRADA']:
-            pass
+            if (ntype == Types.VOID
+                    or Scope.is_declared(node, node.children[0].name, 1)
+                    or node.children[2].value > 1024 or node.children[2].value < 1):
+                self._terminate('')
+
+            Scope.declare_variable(node, node.children[0].name, Types.to_array(ntype))
+            return Types.to_array(ntype), node.children[2].value
+
         elif children_names == ['IDN', 'L_ZAGRADA', 'KR_VOID', 'D_ZAGRADA']:
             pass
         elif children_names == ['IDN', 'L_ZAGRADA', '<lista_parametara>', 'D_ZAGRADA']:
