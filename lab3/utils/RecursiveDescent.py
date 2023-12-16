@@ -484,8 +484,55 @@ class RecursiveDescent:
 
         if children_names == ['<izravni_deklarator>']:
             direct_declarator_type = self._direct_declarator(node.children[0], ntype)
-            if Types.is_const(direct_declarator_type): #or Types.is_array(direct_declarator_type)
+            if Types.is_const(direct_declarator_type):  # or Types.is_array(direct_declarator_type)
                 self._terminate('')
         elif children_names == ['<izravni_deklarator>', 'OP_PRIDRUZI', '<inicijalizator>']:
-            direct_declarator_type = self._direct_declarator(node.children[0], ntype)
-            initializer_type = self._initializer(node.children[2])
+            direct_declarator_type, direct_declarator_n = self._direct_declarator(node.children[0], ntype)
+            initializer_type, initializer_n, initializer_types_list = self._initializer(node.children[2])
+
+            if Types.is_array(direct_declarator_type):
+                if initializer_n > direct_declarator_n:
+                    self._terminate('')
+                for list_type in initializer_types_list:
+                    if not Types.is_castable(list_type, direct_declarator_type):
+                        self._terminate('')
+            else:
+                if not Types.is_castable(direct_declarator_type, initializer_type):
+                    self._terminate('')
+
+    def _direct_declarator(self, node: Node, ntype: str):
+        children_names = self._get_children_names(node)
+
+        # TODO: Variable scoping
+        if children_names == ['IDN']:
+            pass
+        elif children_names == ['IDN', 'L_UGL_ZAGRADA', 'BROJ', 'D_UGL_ZAGRADA']:
+            pass
+        elif children_names == ['IDN', 'L_ZAGRADA', 'KR_VOID', 'D_ZAGRADA']:
+            pass
+        elif children_names == ['IDN', 'L_ZAGRADA', '<lista_parametara>', 'D_ZAGRADA']:
+            pass
+
+    def _initializer(self, node: Node):
+        children_names = self._get_children_names(node)
+
+        # TODO: <izraz_pridruzivanja> ⇒ NIZ_ZNAKOVA check
+        if children_names == ['<izraz_pridruzivanja>']:
+            pass
+        elif children_names == ['L_VIT_ZAGRADA', '<lista_izraza_pridruzivanja>', 'D_VIT_ZAGRADA']:
+            return self._assignment_expressions_list(node.children[1])
+
+    def _assignment_expressions_list(self, node: Node):
+        children_names = self._get_children_names(node)
+
+        if children_names == ['<izraz_pridruzivanja>']:
+            assignment_expression_type = self._assignment_expression(node.children[0])
+
+            return [assignment_expression_type], 1
+        elif children_names == ['<lista_izraza_pridruzivanja>', 'ZAREZ', '<izraz_pridruzivanja>']:
+            assignment_expressions_list_types, assignment_expressions_list_n = self._assignment_expressions_list(
+                node.children[0])
+
+            assignment_expression_type = self._assignment_expression(node.children[2])
+
+            return assignment_expressions_list_types + [assignment_expression_type], assignment_expressions_list_n + 1
