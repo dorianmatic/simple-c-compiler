@@ -30,7 +30,7 @@ class Types:
     @staticmethod
     def validate_char(value):
         # TODO: Finish char validation implementation
-        return 0 <= value <= 255
+        return 0 <= ord(value) <= 255
 
     @staticmethod
     def validate_string(value):
@@ -38,7 +38,7 @@ class Types:
 
     @classmethod
     def is_castable(cls, from_type, to_type):
-        return (from_type, to_type) in cls.CASTS
+        return from_type == to_type or (from_type, to_type) in cls.CASTS
 
     @classmethod
     def is_explicitly_castable(cls, from_type, to_type):

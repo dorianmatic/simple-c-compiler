@@ -15,10 +15,16 @@ class Node:
 
         self.name = name
         self.line = line
-        self.value = value
+        self.value = self._parse_value(value, name)
         self.parent = None
         self.children = []
         self.scope = None # Used in Recursive Descent
+
+    @staticmethod
+    def _parse_value(value, name):
+        if name == 'ZNAK' or name == 'NIZ_ZNAKOVA':
+            return value[1:-1]
+        return value
 
     def set_parent(self, parent):
         self.parent = parent
@@ -61,22 +67,7 @@ class Node:
 
     def declare_variable(self, identifier: str, variable_type: str):
         node = self
-        while node.name != Scope.GLOBAL_SCOPE_NODE and node.name != Scope.LOCAL_SCOPE_NODE:
-            node = node.parent
-
-        if node.scope is None:
-            node.create_scope(Scope())
-
-        node.scope.add_declaration({
-            'identifier': identifier,
-            'type': variable_type,
-            'kind': 'variable'
-        })
-
-    def declare_function(self, identifier: str, parameter_types: list[str], return_type: str,
-                         definition: bool = False):
-        node = self.parent
-        while node.name != Scope.GLOBAL_SCOPE_NODE:
+        while node.parent and node.name != Scope.LOCAL_SCOPE_NODE:
             node = node.parent
 
         if node.scope is None:
@@ -84,8 +75,26 @@ class Node:
 
         node.scope.add_declaration({
             'identifier': identifier,
+            'return_type': variable_type,
+            'kind': 'variable'
+        })
+
+    def declare_function(self, identifier: str, parameter_types: list[str], return_type: str,
+                         definition: bool = False):
+        node = self.parent
+        while node.parent:
+            node = node.parent
+
+        if node.scope is None:
+            node.scope = Scope()
+
+        declaration = {
+            'identifier': identifier,
             'parameter_types': parameter_types,
             'return_type': return_type,
             'kind': 'function',
             'definition': definition
-        })
+        }
+        node.scope.add_declaration(declaration)
+
+        return declaration

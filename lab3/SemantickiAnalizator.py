@@ -1,5 +1,5 @@
 import fileinput
-from utils.generative_tree import build_tree, print_tree
+from utils.generative_tree import build_tree
 from utils.RecursiveDescent import RecursiveDescent, DescentException
 
 if __name__ == '__main__':

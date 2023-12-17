@@ -12,22 +12,61 @@ class DescentException(Exception):
 class RecursiveDescent:
     def __init__(self, tree: Node):
         self.tree = tree
+        self.function_declarations = []
 
     def descend(self):
         self._translation_unit(self.tree)
+
+        if not self._main_exists():
+            self._terminate(message='main')
+        if self._non_defined_function_exists():
+            self._terminate(message='funkcija')
+
+    def _main_exists(self):
+        queue = [self.tree]
+        while True:
+            node = queue.pop()
+            if node.name == Scope.GLOBAL_SCOPE_NODE and node.scope:
+                break
+            else:
+                queue.extend(node.children)
+
+        for declaration in node.scope.declarations:
+            if declaration['kind'] == 'function' and declaration['identifier'] == 'main' and declaration[
+                'parameter_types'] == [Types.VOID] and declaration['return_type'] == Types.INT:
+                return True
+
+        return False
+
+    def _non_defined_function_exists(self):
+        declarations = filter(lambda d: d['definition'] is False, self.function_declarations)
+        definitions = filter(lambda d: d['definition'] is True, self.function_declarations)
+        for declaration in declarations:
+            for definition in definitions:
+                if declaration['identifier'] == definition['identifier'] and declaration['parameter_types'] == \
+                        definition['parameter_types'] and declaration['return_type'] == definition['return_type']:
+                    continue
+            return True
+        return False
 
     @staticmethod
     def _get_children_names(node: Node):
         return list(map(lambda child: child.name, node.children))
 
-    def _terminate(self, node: Node):
-        message = f'{node.name} ::= '
-        for child in node.children:
-            if is_non_terminal(child.name):
-                message += child.name
-            else:
-                message += f'{child.name}({child.line},{child.value})'
-            
+    def _terminate(self, node: Node = None, message: str = ''):
+        if not message:
+            message = f'{node.name} ::='
+            for child in node.children:
+                if is_non_terminal(child.name):
+                    message += f' {child.name}'
+                else:
+                    if child.name == 'NIZ_ZNAKOVA':
+                        child.value = f'"{child.value}"'
+                    elif child.name == 'ZNAK':
+                        child.value = f"'{child.value}'"
+
+                    message += f' {child.name}({child.line},{child.value})'
+
         raise DescentException(message)
 
     ## SEMANTIC RULES ##
@@ -36,9 +75,12 @@ class RecursiveDescent:
         children_names = self._get_children_names(node)
 
         if children_names == ['IDN']:
-            if declaration := node.get_declaration(node.children[0].name):
-                return (declaration['type'],
-                        not Types.is_const(declaration['type']) or Types.is_array(declaration['type']))
+            if declaration := node.get_declaration(node.children[0].value):
+                if declaration['kind'] == 'variable':
+                    var_type = declaration['return_type']
+                    return var_type, not (Types.is_const(var_type) or Types.is_array(var_type))
+                else:
+                    return declaration, False
             else:
                 self._terminate(node)
 
@@ -424,15 +466,17 @@ class RecursiveDescent:
 
             self._terminate(node)
         elif children_names == ['KR_RETURN', '<izraz>', 'TOCKAZAREZ']:
-            exp_type = self._expression(node.children[1])
-            while node.parent is not None:
-                node = node.parent
-                if node.scope is None:
-                    continue
+            exp_type, _ = self._expression(node.children[1])
+            parent = node.parent
+            while parent.name != Scope.GLOBAL_SCOPE_NODE:
+                parent = parent.parent
 
-                for declaration in node.scope.declarations:
-                    if declaration['kind'] == 'function' and Types.is_castable(exp_type, declaration['return_type']):
-                        return
+            if parent.scope is None:
+                return None
+
+            for declaration in parent.scope.declarations:
+                if declaration['kind'] == 'function' and Types.is_castable(exp_type, declaration['return_type']):
+                    return
 
             self._terminate(node)
 
@@ -443,7 +487,7 @@ class RecursiveDescent:
             self._outer_declaration(node.children[0])
         elif children_names == ['<prijevodna_jedinica>', '<vanjska_deklaracija>']:
             self._translation_unit(node.children[0])
-            self._outer_declaration(node.children[0])
+            self._outer_declaration(node.children[1])
 
     def _outer_declaration(self, node: Node):
         children_names = self._get_children_names(node)
@@ -466,7 +510,9 @@ class RecursiveDescent:
                     'parameter_types'] != [Types.VOID]:
                     self._terminate(node)
 
-            node.declare_function(node.children[1].value, [Types.VOID], type_name_type, True)
+            self.function_declarations.append(
+                node.declare_function(node.children[1].value, [Types.VOID], type_name_type, True)
+            )
             self._complex_command(node.children[5])
         elif children_names == ['<ime_tipa>', 'IDN', 'L_ZAGRADA', '<lista_parametara>', 'D_ZAGRADA',
                                 '<slozena_naredba>']:
@@ -480,9 +526,11 @@ class RecursiveDescent:
                     'parameter_types'] != param_list_types:
                     self._terminate(node)
 
-            node.declare_function(node.children[1].name, param_list_types, type_name_type, True)
+            self.function_declarations.append(
+                node.declare_function(node.children[1].value, param_list_types, type_name_type, True)
+            )
             for var_type, var_name in zip(param_list_types, param_list_names):
-                Scope.declare_variable(node.children[5], var_name, var_type)
+                node.children[5].declare_variable(var_name, var_type)
 
             self._complex_command(node.children[5])
 
@@ -573,7 +621,7 @@ class RecursiveDescent:
                 self._terminate(node)
 
             node.declare_variable(node.children[0].name, ntype)
-            return ntype
+            return ntype, 0
         elif children_names == ['IDN', 'L_UGL_ZAGRADA', 'BROJ', 'D_UGL_ZAGRADA']:
             if (ntype == Types.VOID
                     or node.get_declaration(node.children[0].name, 1)
@@ -588,7 +636,9 @@ class RecursiveDescent:
                 if declaration['return_type'] != ntype or declaration['parameter_types'] != [Types.VOID]:
                     self._terminate(node)
             else:
-                node.declare_function(node.children[0].name, [Types.VOID], ntype)
+                self.function_declarations.append(
+                    node.declare_function(node.children[0].value, [Types.VOID], ntype)
+                )
 
             return Types.FUNCTION([Types.VOID], ntype)
         elif children_names == ['IDN', 'L_ZAGRADA', '<lista_parametara>', 'D_ZAGRADA']:
@@ -598,7 +648,9 @@ class RecursiveDescent:
                 if declaration['return_type'] != ntype or declaration['parameter_types'] != param_list_types:
                     self._terminate(node)
             else:
-                node.declare_function(node.children[0].name, param_list_types, ntype)
+                self.function_declarations.append(
+                    node.declare_function(node.children[0].value, param_list_types, ntype)
+                )
 
             return Types.FUNCTION(param_list_types, ntype)
 
