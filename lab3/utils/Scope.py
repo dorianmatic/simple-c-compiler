@@ -1,5 +1,4 @@
 class Scope:
-    GLOBAL_SCOPE_NODE = '<prijevodna_jedinica>'
     LOCAL_SCOPE_NODE = '<slozena_naredba>'
 
     def __init__(self):

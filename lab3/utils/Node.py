@@ -37,7 +37,7 @@ class Node:
 
     def _get_global_declaration(self, identifier: str):
         parent = self.parent
-        while parent.name != Scope.GLOBAL_SCOPE_NODE:
+        while parent.parent:
             parent = parent.parent
 
         if parent.scope is None:

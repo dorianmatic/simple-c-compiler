@@ -23,15 +23,7 @@ class RecursiveDescent:
             self._terminate(message='funkcija')
 
     def _main_exists(self):
-        queue = [self.tree]
-        while True:
-            node = queue.pop()
-            if node.name == Scope.GLOBAL_SCOPE_NODE and node.scope:
-                break
-            else:
-                queue.extend(node.children)
-
-        for declaration in node.scope.declarations:
+        for declaration in self.tree.scope.declarations:
             if declaration['kind'] == 'function' and declaration['identifier'] == 'main' and declaration[
                 'parameter_types'] == [Types.VOID] and declaration['return_type'] == Types.INT:
                 return True
@@ -39,10 +31,10 @@ class RecursiveDescent:
         return False
 
     def _non_defined_function_exists(self):
-        declarations = filter(lambda d: d['definition'] is False, self.function_declarations)
-        definitions = filter(lambda d: d['definition'] is True, self.function_declarations)
-        for declaration in declarations:
-            for definition in definitions:
+        for i, declaration in enumerate(self.function_declarations):
+            if declaration['definition']:
+                continue
+            for definition in filter(lambda d: d['definition'] is True, self.function_declarations[:i]):
                 if declaration['identifier'] == definition['identifier'] and declaration['parameter_types'] == \
                         definition['parameter_types'] and declaration['return_type'] == definition['return_type']:
                     continue
@@ -83,7 +75,6 @@ class RecursiveDescent:
                     return declaration, False
             else:
                 self._terminate(node)
-
 
         elif children_names == ['BROJ']:
             if not Types.validate_int(node.children[0].value):
@@ -129,8 +120,11 @@ class RecursiveDescent:
         elif children_names == ['<postfiks_izraz>', 'L_ZAGRADA', '<lista_argumenata>', 'D_ZAGRADA']:
             postfix_exp_type, _ = self._postfix_expression(node.children[0])
             argument_list_types = self._argument_list(node.children[2])
-            for parameter_type, argument_type in zip(postfix_exp_type, argument_list_types):
-                if not Types.is_castable(parameter_type, argument_type):
+
+            if len(postfix_exp_type['parameter_types']) != len(argument_list_types):
+                self._terminate(node)
+            for parameter_type, argument_type in zip(postfix_exp_type['parameter_types'], argument_list_types):
+                if not Types.is_castable(argument_type, parameter_type):
                     self._terminate(node)
 
             return postfix_exp_type['return_type'], False
@@ -150,18 +144,18 @@ class RecursiveDescent:
 
             return [assigment_exp_type]
         if children_names == ['<lista_argumenata>', 'ZAREZ', '<izraz_pridruzivanja>']:
-            argument_list_type, _ = self._argument_list(node.children[0])
+            argument_list_type = self._argument_list(node.children[0])
             assigment_exp_type, _ = self._assignment_expression(node.children[2])
 
-            return argument_list_type + assigment_exp_type
+            return argument_list_type + [assigment_exp_type]
 
     def _unary_expression(self, node: Node):
         children_names = self._get_children_names(node)
 
         if children_names == ['<postfiks_izraz>']:
             return self._postfix_expression(node.children[0])
-        elif children_names == ['OP_INC', '<unary_expression>'] or children_names == ['OP_DEC', '<unary_expression>']:
-            unary_exp_type, unary_exp_l_exp = self._unary_expression(node.children[0])
+        elif children_names == ['OP_INC', '<unarni_izraz>'] or children_names == ['OP_DEC', '<unarni_izraz>']:
+            unary_exp_type, unary_exp_l_exp = self._unary_expression(node.children[1])
             if unary_exp_l_exp == False or not Types.is_castable(unary_exp_type, Types.INT):
                 self._terminate(node)
 
@@ -179,7 +173,7 @@ class RecursiveDescent:
         if children_names == ['<unarni_izraz>']:
             return self._unary_expression(node.children[0])
         elif children_names == ['L_ZAGRADA', '<ime_tipa>', 'D_ZAGRADA', '<cast_izraz>']:
-            type_name_type, _ = self._type_name(node.children[1])
+            type_name_type = self._type_name(node.children[1])
             cast_exp_type, _ = self._cast_expression(node.children[3])
 
             if not Types.is_explicitly_castable(cast_exp_type, type_name_type):
@@ -393,6 +387,8 @@ class RecursiveDescent:
             self._loop_command(node.children[0])
         elif children_names == ['<naredba_skoka>']:
             self._jump_command(node.children[0])
+        elif children_names == ['<naredba_grananja>']:
+            self._if_command(node.children[0])
 
     def _expression_command(self, node: Node):
         children_names = self._get_children_names(node)
@@ -448,19 +444,21 @@ class RecursiveDescent:
         children_names = self._get_children_names(node)
 
         if children_names == ['KR_CONTINUE', 'TOCKAZAREZ'] or children_names == ['KR_BREAK', 'TOCKAZAREZ']:
-            while node.parent is not None:
-                if node.name == '<naredba_petlje>':
+            working_node = node
+            while working_node.parent is not None:
+                if working_node.name == '<naredba_petlje>':
                     return
-                node = node.parent
+                working_node = working_node.parent
 
             self._terminate(node)
         elif children_names == ['KR_RETURN', 'TOCKAZAREZ']:
-            while node.parent is not None:
-                node = node.parent
-                if node.scope is None:
+            working_node = node
+            while working_node.parent is not None:
+                working_node = working_node.parent
+                if working_node.scope is None:
                     continue
 
-                for declaration in node.scope.declarations:
+                for declaration in working_node.scope.declarations:
                     if declaration['kind'] == 'function' and declaration['return_type'] == Types.VOID:
                         return
 
@@ -468,7 +466,7 @@ class RecursiveDescent:
         elif children_names == ['KR_RETURN', '<izraz>', 'TOCKAZAREZ']:
             exp_type, _ = self._expression(node.children[1])
             parent = node.parent
-            while parent.name != Scope.GLOBAL_SCOPE_NODE:
+            while parent.parent:
                 parent = parent.parent
 
             if parent.scope is None:
@@ -505,7 +503,7 @@ class RecursiveDescent:
             if Types.is_const(type_name_type):
                 self._terminate(node)
 
-            if declaration := node.get_declaration(node.children[1].name, only_global=True):
+            if declaration := node.get_declaration(node.children[1].value, only_global=True):
                 if declaration['definition'] or declaration['return_type'] != type_name_type or declaration[
                     'parameter_types'] != [Types.VOID]:
                     self._terminate(node)
@@ -548,7 +546,7 @@ class RecursiveDescent:
             if param_declaration_name in param_list_names:
                 self._terminate(node)
 
-            return param_list_types + param_declaration_type, param_list_names + param_declaration_name
+            return param_list_types + [param_declaration_type], param_list_names + [param_declaration_name]
 
     def _parameter_declaration(self, node: Node):
         children_names = self._get_children_names(node)
@@ -599,15 +597,17 @@ class RecursiveDescent:
                 self._terminate(node)
         elif children_names == ['<izravni_deklarator>', 'OP_PRIDRUZI', '<inicijalizator>']:
             direct_declarator_type, direct_declarator_n = self._direct_declarator(node.children[0], ntype)
-            initializer_type, initializer_n, initializer_types_list = self._initializer(node.children[2])
+            initializer_result = self._initializer(node.children[2])
 
             if Types.is_array(direct_declarator_type):
+                initializer_type, initializer_n, initializer_types_list = initializer_result
                 if initializer_n > direct_declarator_n:
                     self._terminate(node)
                 for list_type in initializer_types_list:
                     if not Types.is_castable(list_type, direct_declarator_type):
                         self._terminate(node)
             else:
+                initializer_type = initializer_result
                 if not Types.is_castable(direct_declarator_type, initializer_type):
                     self._terminate(node)
 
@@ -617,18 +617,18 @@ class RecursiveDescent:
         if children_names == ['IDN']:
             if ntype == Types.VOID:
                 self._terminate(node)
-            if node.get_declaration(node.children[0].name, 1):
+            if node.get_declaration(node.children[0].value, 1):
                 self._terminate(node)
 
-            node.declare_variable(node.children[0].name, ntype)
+            node.declare_variable(node.children[0].value, ntype)
             return ntype, 0
         elif children_names == ['IDN', 'L_UGL_ZAGRADA', 'BROJ', 'D_UGL_ZAGRADA']:
             if (ntype == Types.VOID
                     or node.get_declaration(node.children[0].name, 1)
-                    or node.children[2].value > 1024 or node.children[2].value < 1):
+                    or int(node.children[2].value) > 1024 or int(node.children[2].value) < 1):
                 self._terminate(node)
 
-            node.declare_variable(node.children[0].name, Types.to_array(ntype))
+            node.declare_variable(node.children[0].value, Types.to_array(ntype))
             return Types.to_array(ntype), node.children[2].value
 
         elif children_names == ['IDN', 'L_ZAGRADA', 'KR_VOID', 'D_ZAGRADA']:
@@ -659,7 +659,7 @@ class RecursiveDescent:
 
         # TODO: <izraz_pridruzivanja> ⇒ NIZ_ZNAKOVA check
         if children_names == ['<izraz_pridruzivanja>']:
-            pass
+            return self._assignment_expression(node.children[0])[0]
         elif children_names == ['L_VIT_ZAGRADA', '<lista_izraza_pridruzivanja>', 'D_VIT_ZAGRADA']:
             return self._assignment_expressions_list(node.children[1])
 

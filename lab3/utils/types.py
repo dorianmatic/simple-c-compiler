@@ -1,3 +1,5 @@
+import string
+
 class Types:
     CHAR = 'char'
     INT = 'int'
@@ -18,9 +20,12 @@ class Types:
         (ARRAY_INT, ARRAY_CONST_INT), (ARRAY_CHAR, ARRAY_CONST_CHAR)
     ]
 
-    # TODO: Can one cast to CONST_INT?
     EXPLICIT_CASTS = [
-        (CHAR, INT), (CONST_CHAR, INT)
+        (CHAR, INT), (INT, CHAR),
+        (CONST_CHAR, INT), (INT, CONST_CHAR),
+        (INT, CONST_INT), (CONST_INT, INT),
+        (CHAR, CONST_CHAR), (CONST_CHAR, CHAR),
+        (CONST_CHAR, CONST_INT), (CONST_INT, CONST_CHAR)
     ]
 
     @staticmethod
@@ -29,12 +34,20 @@ class Types:
 
     @staticmethod
     def validate_char(value):
-        # TODO: Finish char validation implementation
         return 0 <= ord(value) <= 255
 
     @staticmethod
     def validate_string(value):
-        pass
+        for i, char in enumerate(value):
+            if char == '\\':
+                if value[i+1] in ('0', 'n', "'", '"', '\\'):
+                    continue
+                else:
+                    return False
+            elif char not in string.printable + '\0':
+                return False
+
+        return True
 
     @classmethod
     def is_castable(cls, from_type, to_type):
