@@ -52,18 +52,18 @@ class Node:
     def _get_declaration(self, identifier: str, max_levels=-1):
         levels = 0
         node = self
-        while True:
-            node = node.parent
-            if node is None or levels == max_levels:
-                return None
-            if node.scope is None:
+        while node := node.parent:
+            if node.parent and node.name != Scope.LOCAL_SCOPE_NODE:
                 continue
 
-            for declaration in node.scope.declarations:
-                if declaration['identifier'] == identifier:
-                    return declaration
+            if node.scope:
+                for declaration in node.scope.declarations:
+                    if declaration['identifier'] == identifier:
+                        return declaration
 
             levels += 1
+            if levels == max_levels:
+                return None
 
     def declare_variable(self, identifier: str, variable_type: str):
         node = self
@@ -82,7 +82,7 @@ class Node:
     def declare_function(self, identifier: str, parameter_types: list[str], return_type: str,
                          definition: bool = False):
         node = self.parent
-        while node.parent:
+        while node.parent and (definition or node.name != Scope.LOCAL_SCOPE_NODE):
             node = node.parent
 
         if node.scope is None:

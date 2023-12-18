@@ -1,7 +1,6 @@
 from lab3.utils.helpers import *
 from lab3.utils.generative_tree import Node
 from lab3.utils.types import Types
-from lab3.utils.Scope import Scope
 
 
 class DescentException(Exception):
@@ -556,7 +555,6 @@ class RecursiveDescent:
             if type_name_type == Types.VOID:
                 self._terminate(node)
 
-            # TODO: Is node.children[1].value okay?
             return type_name_type, node.children[1].value
         elif children_names == ['<ime_tipa>', 'IDN', 'L_UGL_ZAGRADA', 'D_UGL_ZAGRADA']:
             type_name_type = self._type_name(node.children[0])
@@ -592,23 +590,23 @@ class RecursiveDescent:
         children_names = self._get_children_names(node)
 
         if children_names == ['<izravni_deklarator>']:
-            direct_declarator_type = self._direct_declarator(node.children[0], ntype)
-            if Types.is_const(direct_declarator_type):  # or Types.is_array(direct_declarator_type)
+            direct_declarator_type, _ = self._direct_declarator(node.children[0], ntype)
+            if Types.is_const(direct_declarator_type):
                 self._terminate(node)
         elif children_names == ['<izravni_deklarator>', 'OP_PRIDRUZI', '<inicijalizator>']:
             direct_declarator_type, direct_declarator_n = self._direct_declarator(node.children[0], ntype)
             initializer_result = self._initializer(node.children[2])
 
             if Types.is_array(direct_declarator_type):
-                initializer_type, initializer_n, initializer_types_list = initializer_result
+                initializer_n, initializer_types_list = initializer_result
                 if initializer_n > direct_declarator_n:
                     self._terminate(node)
                 for list_type in initializer_types_list:
-                    if not Types.is_castable(list_type, direct_declarator_type):
+                    if not Types.is_castable(list_type, Types.get_array_type(direct_declarator_type)):
                         self._terminate(node)
             else:
                 initializer_type = initializer_result
-                if not Types.is_castable(direct_declarator_type, initializer_type):
+                if not Types.is_castable(initializer_type, direct_declarator_type):
                     self._terminate(node)
 
     def _direct_declarator(self, node: Node, ntype: str):
@@ -624,15 +622,15 @@ class RecursiveDescent:
             return ntype, 0
         elif children_names == ['IDN', 'L_UGL_ZAGRADA', 'BROJ', 'D_UGL_ZAGRADA']:
             if (ntype == Types.VOID
-                    or node.get_declaration(node.children[0].name, 1)
+                    or node.get_declaration(node.children[0].value, 1)
                     or int(node.children[2].value) > 1024 or int(node.children[2].value) < 1):
                 self._terminate(node)
 
             node.declare_variable(node.children[0].value, Types.to_array(ntype))
-            return Types.to_array(ntype), node.children[2].value
+            return Types.to_array(ntype), int(node.children[2].value)
 
         elif children_names == ['IDN', 'L_ZAGRADA', 'KR_VOID', 'D_ZAGRADA']:
-            if declaration := node.get_declaration(node.children[0].name, 1):
+            if declaration := node.get_declaration(node.children[0].value, 1):
                 if declaration['return_type'] != ntype or declaration['parameter_types'] != [Types.VOID]:
                     self._terminate(node)
             else:
@@ -644,7 +642,7 @@ class RecursiveDescent:
         elif children_names == ['IDN', 'L_ZAGRADA', '<lista_parametara>', 'D_ZAGRADA']:
             param_list_types, _ = self._parameter_list(node.children[2])
 
-            if declaration := node.get_declaration(node.children[0].name, 1):
+            if declaration := node.get_declaration(node.children[0].value, 1):
                 if declaration['return_type'] != ntype or declaration['parameter_types'] != param_list_types:
                     self._terminate(node)
             else:
@@ -657,9 +655,16 @@ class RecursiveDescent:
     def _initializer(self, node: Node):
         children_names = self._get_children_names(node)
 
-        # TODO: <izraz_pridruzivanja> ⇒ NIZ_ZNAKOVA check
         if children_names == ['<izraz_pridruzivanja>']:
-            return self._assignment_expression(node.children[0])[0]
+            working_node = node
+            while working_node.children:
+                working_node = working_node.children[0]
+
+            result = self._assignment_expression(node.children[0])
+            if working_node.name == 'NIZ_ZNAKOVA':
+                return len(working_node.value) + 1, [Types.CHAR] * len(working_node.value)
+            else:
+                return result[0]
         elif children_names == ['L_VIT_ZAGRADA', '<lista_izraza_pridruzivanja>', 'D_VIT_ZAGRADA']:
             return self._assignment_expressions_list(node.children[1])
 
@@ -667,13 +672,12 @@ class RecursiveDescent:
         children_names = self._get_children_names(node)
 
         if children_names == ['<izraz_pridruzivanja>']:
-            assignment_expression_type = self._assignment_expression(node.children[0])
+            assignment_expression_type, _ = self._assignment_expression(node.children[0])
 
-            return [assignment_expression_type], 1
+            return 1, [assignment_expression_type]
         elif children_names == ['<lista_izraza_pridruzivanja>', 'ZAREZ', '<izraz_pridruzivanja>']:
-            assignment_expressions_list_types, assignment_expressions_list_n = self._assignment_expressions_list(
+            assignment_expressions_list_n, assignment_expressions_list_types = self._assignment_expressions_list(
                 node.children[0])
 
-            assignment_expression_type = self._assignment_expression(node.children[2])
-
-            return assignment_expressions_list_types + [assignment_expression_type], assignment_expressions_list_n + 1
+            assignment_expression_type, _ = self._assignment_expression(node.children[2])
+            return assignment_expressions_list_n + 1, assignment_expressions_list_types + [assignment_expression_type]
