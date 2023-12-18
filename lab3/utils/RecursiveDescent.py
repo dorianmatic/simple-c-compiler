@@ -14,14 +14,24 @@ class RecursiveDescent:
         self.function_declarations = []
 
     def descend(self):
+        """
+        Begin recursive descent by checking the top-level generative tree unit (always _translation_unit)
+        If successful, verify that there is a 'main' function in the source code and that all declared functions are in
+        fact defined.
+        """
+
         self._translation_unit(self.tree)
 
         if not self._main_exists():
             self._terminate(message='main')
-        if self._non_defined_function_exists():
+        if self._non_defined_function_declared():
             self._terminate(message='funkcija')
 
     def _main_exists(self):
+        """
+        Verify that function with signature: `int main(void);` exists.
+        """
+
         for declaration in self.tree.scope.declarations:
             if declaration['kind'] == 'function' and declaration['identifier'] == 'main' and declaration[
                 'parameter_types'] == [Types.VOID] and declaration['return_type'] == Types.INT:
@@ -29,7 +39,12 @@ class RecursiveDescent:
 
         return False
 
-    def _non_defined_function_exists(self):
+    def _non_defined_function_declared(self):
+        """
+        Verify that all functions that are declared are also defined and make sure that the definition is before
+        declaration.
+        """
+
         for i, declaration in enumerate(self.function_declarations):
             if declaration['definition']:
                 continue
@@ -45,6 +60,11 @@ class RecursiveDescent:
         return list(map(lambda child: child.name, node.children))
 
     def _terminate(self, node: Node = None, message: str = ''):
+        """
+        Terminate the descent by raising DescentException with a predefined message, or with a message built from the
+        node in which the problem was encountered.
+        """
+
         if not message:
             message = f'{node.name} ::='
             for child in node.children:
