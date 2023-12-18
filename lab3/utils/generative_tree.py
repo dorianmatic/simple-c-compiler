@@ -1,11 +1,4 @@
-class Node:
-    def __init__(self, name):
-        self.name = name
-        self.parent = None
-        self.children = []
-
-    def set_parent(self, parent):
-        self.parent = parent
+from lab3.utils.Node import Node
 
 def build_tree(lines):
     last_at_level = []
@@ -26,7 +19,7 @@ def build_tree(lines):
     return last_at_level[0]
 
 
-def print_tree(node, indent=0):
+def print_tree(node: Node, indent=0):
     print(' ' * indent + node.name)
 
     for child in node.children:

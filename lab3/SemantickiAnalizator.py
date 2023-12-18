@@ -1,5 +1,6 @@
 import fileinput
-from utils.Tree import build_tree, print_tree
+from utils.generative_tree import build_tree
+from utils.RecursiveDescent import RecursiveDescent, DescentException
 
 if __name__ == '__main__':
     lines = []
@@ -8,5 +9,9 @@ if __name__ == '__main__':
         lines.append(line)
 
     tree = build_tree(lines)
+    recursive_descent = RecursiveDescent(tree)
 
-    print_tree(tree)
+    try:
+        recursive_descent.descend()
+    except DescentException as de:
+        print(de)
