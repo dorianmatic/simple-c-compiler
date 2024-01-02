@@ -41,10 +41,31 @@ output.
 **NOTE:** This analyzer verifies the rules for a language that is a subset of the C programming language.
 
 Running:
-1. Run generator with ```python lab3/SemantickiAnalizator.py``` and provide generative tree from previous compilation 
+1. Run analyzer with ```python lab3/SemantickiAnalizator.py``` and provide generative tree from previous compilation 
 step.
 
 Running on official test set:
 1. Download official test set
 2. Copy ```lab3_teza``` folder into ```lab3/examples```
 3. Run tests with ```python lab3/test/integration_tests/lab3_test.py```
+
+---
+## Lab 4: Code generation
+
+The code generator is run after the semantic analysis phase and generates the RISC assembly code that can be run on the
+provided simulator.
+
+Prerequisites:
+- NodeJS installed and available via `node` command.
+
+Running:
+1. Run code generator with ```python lab4/GeneratorKoda.py``` and provide the generative tree from the previous 
+compilation step.
+2. The generator will produce ```lab4/a.frisc``` file containing the assembly code.
+3. Run the code on the simulator with ```node lab4/sim/main.js lab4/a.frisc``` and evaluate result.
+
+Running on official test set:
+1. Download the official test set.
+2. Copy ```lab4_teza``` folder into ```lab4/examples```
+3. Run tests with ```python lab4/test/integration_tests/lab4_test.py```
+
