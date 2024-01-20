@@ -34,11 +34,13 @@ def print_process_result(result, time_elapsed):
 def run_python(script, input_path):
     start_time = time.time()
     try:
+        
         result = subprocess.run(['python', script], text=True, capture_output=True,
                                 stdin=input_path.open(), timeout=250)
         print_process_result(result, time.time() - start_time)
-
+        
         return result
+
     except TimeoutExpired:
         print(f"{bcolors.FAIL} TIMEOUT {bcolors.ENDC}")
 
@@ -63,7 +65,7 @@ parser.add_argument('--generator', help='Code generator script path')
 parser.add_argument('--simulator', help='Processor simulator script path')
 
 args = parser.parse_args()
-examples_path = args.examples or Path(__file__).parents[2].joinpath('examples/lab3_teza')
+examples_path = args.examples or Path(__file__).parents[2].joinpath('examples/lab4_teza')
 code_generator_script = args.generator or Path(__file__).parents[2].joinpath('GeneratorKoda.py')
 simulator_script = args.simulator or Path(__file__).parents[2].joinpath('sim/main.js')
 generator_result_path = Path(__file__).parents[2].joinpath('a.frisc')
