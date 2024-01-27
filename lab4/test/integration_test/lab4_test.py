@@ -38,9 +38,8 @@ def run_python(script, input_path):
         result = subprocess.run(['python', script], text=True, capture_output=True,
                                 stdin=input_path.open(), timeout=250)
         print_process_result(result, time.time() - start_time)
-        print(result)
-        return result
 
+        return result
     except TimeoutExpired:
         print(f"{bcolors.FAIL} TIMEOUT {bcolors.ENDC}")
 
