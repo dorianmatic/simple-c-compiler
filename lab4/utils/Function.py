@@ -5,4 +5,3 @@ class Function:
         self.params = []
         self.mem_loc = ""
         self.stog = 0
-        self.called_func = None

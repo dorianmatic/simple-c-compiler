@@ -1,11 +1,11 @@
-import generative_tree
-from Node import Node
-from Variable import Variable
-from Function import Function
+from pathlib import Path
+
+from lab4.utils.Variable import Variable
+from lab4.utils.Function import Function
 import fileinput
-from generative_tree import build_tree
-from RecursiveDescent import RecursiveDescent, DescentException
-from Node import Node
+from lab4.utils.generative_tree import build_tree
+from lab4.utils.RecursiveDescent import RecursiveDescent, DescentException
+from lab4.utils.Node import Node
 
 scope_mem_loc = {"global": []}
 level = ["global"]
@@ -890,7 +890,8 @@ if __name__ == "__main__":
         recursive_descent.descend()
     except DescentException as de:
         print(de)
-    frisc = open("a.frisc", "w")
+
+    frisc = open(Path(__file__).parent.joinpath('a.frisc'), "w")
     generate_code(frisc, tree)
     frisc.close()
 

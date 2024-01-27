@@ -1,6 +1,6 @@
-from helpers import *
-from generative_tree import Node
-from tipovi import Types
+from lab4.utils.helpers import *
+from lab4.utils.generative_tree import Node
+from lab4.utils.tipovi import Types
 
 
 class DescentException(Exception):

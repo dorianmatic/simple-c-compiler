@@ -1,7 +1,7 @@
 import fileinput
-from generative_tree import build_tree
+from lab4.utils.generative_tree import build_tree
 from RecursiveDescent import RecursiveDescent, DescentException
-from Node import Node
+
 
 def main():
     lines = []

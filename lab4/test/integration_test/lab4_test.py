@@ -1,4 +1,5 @@
 import argparse
+import os.path
 import subprocess
 from subprocess import TimeoutExpired
 import time
@@ -34,11 +35,10 @@ def print_process_result(result, time_elapsed):
 def run_python(script, input_path):
     start_time = time.time()
     try:
-        
         result = subprocess.run(['python', script], text=True, capture_output=True,
                                 stdin=input_path.open(), timeout=250)
         print_process_result(result, time.time() - start_time)
-        
+        print(result)
         return result
 
     except TimeoutExpired:
@@ -50,7 +50,7 @@ def run_python(script, input_path):
 def run_javascript(script, input_path):
     start_time = time.time()
     try:
-        result = subprocess.run(['node', script, input_path], text=True, capture_output=True, timeout=250)
+        result = subprocess.run(['node', script, input_path], text=True, capture_output=True, timeout=5)
         print_process_result(result, time.time() - start_time)
 
         return result
@@ -65,9 +65,9 @@ parser.add_argument('--generator', help='Code generator script path')
 parser.add_argument('--simulator', help='Processor simulator script path')
 
 args = parser.parse_args()
-examples_path = args.examples or Path(__file__).parents[2].joinpath('examples/lab4_teza')
-code_generator_script = args.generator or Path(__file__).parents[2].joinpath('GeneratorKoda.py')
-simulator_script = args.simulator or Path(__file__).parents[2].joinpath('sim/main.js')
+examples_path = Path(args.examples) if args.examples else Path(__file__).parents[2].joinpath('examples/lab4_teza')
+code_generator_script = Path(args.generator) if args.generator else Path(__file__).parents[2].joinpath('GeneratorKoda.py')
+simulator_script = Path(args.simulator) if args.simulator else Path(__file__).parents[2].joinpath('sim/main.js')
 generator_result_path = Path(__file__).parents[2].joinpath('a.frisc')
 
 total = 0
@@ -87,11 +87,15 @@ for test_case_path in test_case_directories(examples_path):
     print(f"Running simulator... ", end='')
     simulator_result = run_javascript(simulator_script, generator_result_path)
     expected = ''.join(sim_output_path.open().readlines())
-    if expected == simulator_result.stdout:
+
+    if simulator_result and expected.strip() == simulator_result.stdout.strip():
         print(f"{bcolors.OKGREEN}Passed.{bcolors.ENDC}")
         passed += 1
     else:
         print(f"{bcolors.FAIL}Failed.{bcolors.ENDC}")
+
+    if os.path.exists(generator_result_path):
+        os.remove(generator_result_path)
 
 
 print(f"{bcolors.OKBLUE}============================{bcolors.ENDC}")

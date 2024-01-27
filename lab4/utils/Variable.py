@@ -11,6 +11,5 @@ class Variable:
         self.root_node = None
         self.list = False
         self.string_var = False
-        
 
     

@@ -1,5 +1,5 @@
-from helpers import *
-from Scope import Scope
+from lab4.utils.helpers import *
+from lab4.utils.Scope import Scope
 
 class Node:
     def __init__(self, content: str):

@@ -1,4 +1,4 @@
-from Node import Node
+from lab4.utils.Node import Node
 
 def build_tree(lines):
     last_at_level = []
