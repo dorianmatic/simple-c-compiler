@@ -67,5 +67,5 @@ compilation step.
 Running on official test set:
 1. Download the official test set.
 2. Copy ```lab4_teza``` folder into ```lab4/examples```
-3. Run tests with ```python lab4/test/integration_tests/lab4_test.py```
+3. Run tests with ```python lab4/test/integration_test/lab4_test.py```
 
